@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statemate — Rekening Koran ke Excel, Otomatis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0F1729;
+    --navy-soft: #1B2742;
+    --cream: #FAF8F4;
+    --cream-deep: #F0ECE3;
+    --amber: #C2682E;
+    --amber-light: #F4E3D3;
+    --amber-deep: #9C4F1F;
+    --sage: #3D7A5C;
+    --sage-light: #E3EFE8;
+    --rose: #A23E3E;
+    --rose-light: #F5E5E2;
+    --slate: #475569;
+    --slate-light: #94A3B8;
+    --line: #E2DDD2;
+    --line-dark: #2A3650;
+
+    --serif: 'Fraunces', serif;
+    --sans: 'Inter', -apple-system, sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--cream);
+    color: var(--navy);
+    line-height: 1.6;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  img, svg { display: block; max-width: 100%; }
+
+  /* ===== Perforated divider — signature element ===== */
+  .perf-divider {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    overflow: hidden;
+  }
+  .perf-divider span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--line);
+    flex-shrink: 0;
+  }
+  .perf-divider.dark span { background: var(--line-dark); }
+
+  /* ===== Nav ===== */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(250,248,244,0.92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    max-width: 1120px; margin: 0 auto;
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .nav-logo .mark {
+    width: 26px; height: 26px;
+    background: var(--navy);
+    border-radius: 6px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .nav-logo .mark::before, .nav-logo .mark::after {
+    content: ''; position: absolute;
+    background: var(--cream);
+    border-radius: 1px;
+  }
+  .nav-logo .mark::before { width: 12px; height: 2px; top: 9px; left: 7px; }
+  .nav-logo .mark::after { width: 8px; height: 2px; top: 15px; left: 7px; }
+  .nav-cta {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 9px 18px;
+    background: var(--navy);
+    color: var(--cream);
+    border-radius: 7px;
+    transition: background 0.15s;
+  }
+  .nav-cta:hover { background: var(--amber-deep); }
+
+  /* ===== Hero ===== */
+  .hero {
+    max-width: 1120px; margin: 0 auto;
+    padding: 76px 32px 50px;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--amber-deep);
+    display: flex; align-items: center; gap: 9px;
+    margin-bottom: 18px;
+  }
+  .eyebrow::before {
+    content: ''; width: 7px; height: 7px;
+    background: var(--amber); border-radius: 50%;
+  }
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: 48px;
+    line-height: 1.08;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin-bottom: 22px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--amber-deep);
+  }
+  .hero .sub {
+    font-size: 16.5px;
+    color: var(--slate);
+    max-width: 460px;
+    margin-bottom: 32px;
+  }
+  .hero-ctas { display: flex; gap: 12px; align-items: center; margin-bottom: 28px; }
+  .btn {
+    font-family: var(--sans); font-weight: 600; font-size: 14.5px;
+    padding: 13px 24px; border-radius: 8px; border: none; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--navy); color: var(--cream); }
+  .btn-primary:hover { background: var(--navy-soft); transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--navy); border: 1.5px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--navy); }
+  .btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+
+  .hero-trust { font-size: 12.5px; color: var(--slate-light); font-family: var(--mono); }
+
+  /* Hero visual: before/after card */
+  .hero-visual {
+    position: relative;
+  }
+  .demo-card {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 24px 60px -20px rgba(15,23,41,0.18);
+    overflow: hidden;
+  }
+  .demo-tabs {
+    display: flex; border-bottom: 1px solid var(--line);
+    background: var(--cream-deep);
+  }
+  .demo-tab {
+    flex: 1; text-align: center; padding: 11px;
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--slate-light); border-bottom: 2px solid transparent;
+  }
+  .demo-tab.active { color: var(--navy); border-bottom-color: var(--amber); background: white; }
+  .demo-body { padding: 18px; }
+  .messy-line {
+    font-family: var(--mono); font-size: 10.5px; color: #b0a99a;
+    white-space: nowrap; overflow: hidden;
+    padding: 3px 0; letter-spacing: -0.01em;
+  }
+  .demo-arrow {
+    display: flex; justify-content: center; padding: 6px 0;
+    color: var(--amber); 
+  }
+  .clean-row {
+    display: grid; grid-template-columns: 60px 1fr 90px 80px;
+    gap: 8px; padding: 7px 0; font-size: 11.5px;
+    border-bottom: 1px solid var(--cream-deep);
+    align-items: center;
+  }
+  .clean-row.head {
+    font-family: var(--mono); font-size: 9.5px; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--slate-light); font-weight: 500;
+  }
+  .clean-row .tag {
+    font-size: 9.5px; padding: 2px 7px; border-radius: 99px;
+    background: var(--sage-light); color: var(--sage); font-weight: 600;
+    width: fit-content;
+  }
+  .clean-row .tag.exp { background: var(--rose-light); color: var(--rose); }
+  .clean-row .amt { font-family: var(--mono); text-align: right; font-weight: 500; }
+  .clean-row .amt.pos { color: var(--sage); }
+  .clean-row .amt.neg { color: var(--rose); }
+
+  .floating-badge {
+    position: absolute; top: -14px; right: 24px;
+    background: var(--amber); color: white;
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 7px 14px; border-radius: 99px;
+    box-shadow: 0 8px 20px -6px rgba(194,104,46,0.5);
+    transform: rotate(3deg);
+  }
+
+  /* ===== Stats bar ===== */
+  .stats-bar {
+    background: var(--navy);
+    padding: 30px 32px;
+  }
+  .stats-inner {
+    max-width: 1120px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+  .stat { color: var(--cream); }
+  .stat .num {
+    font-family: var(--serif); font-size: 30px; font-weight: 600;
+    color: var(--amber); margin-bottom: 2px; letter-spacing: -0.01em;
+  }
+  .stat .label { font-size: 12.5px; color: #B8C0D4; }
+
+  /* ===== Section template ===== */
+  .section { max-width: 1120px; margin: 0 auto; padding: 84px 32px; }
+  .section-head { max-width: 600px; margin-bottom: 48px; }
+  .section-eyebrow {
+    font-family: var(--mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber-deep);
+    margin-bottom: 14px;
+  }
+  .section-head h2 {
+    font-family: var(--serif); font-size: 34px; font-weight: 600;
+    letter-spacing: -0.01em; line-height: 1.18; margin-bottom: 12px;
+  }
+  .section-head p { color: var(--slate); font-size: 15.5px; max-width: 480px; }
+
+  /* ===== Feature grid ===== */
+  .feature-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden;
+  }
+  .feature {
+    background: var(--cream); padding: 30px 26px;
+  }
+  .feature-icon {
+    width: 38px; height: 38px; border-radius: 9px;
+    background: var(--amber-light); display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+  }
+  .feature-icon svg { width: 19px; height: 19px; stroke: var(--amber-deep); fill: none; stroke-width: 1.8; }
+  .feature h3 { font-family: var(--serif); font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .feature p { font-size: 13.5px; color: var(--slate); line-height: 1.65; }
+
+  /* ===== Category showcase ===== */
+  .cat-section { background: var(--navy); color: var(--cream); }
+  .cat-section .section-eyebrow { color: var(--amber); }
+  .cat-section .section-head p { color: #B8C0D4; }
+  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .cat-col {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 24px;
+  }
+  .cat-col-head {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 16px; padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cat-col-head.in { color: var(--sage); }
+  .cat-col-head.out { color: #E8957A; }
+  .cat-col-head::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .cat-tags { display: flex; flex-wrap: wrap; gap: 7px; }
+  .cat-tag {
+    font-size: 12px; padding: 6px 11px; border-radius: 99px;
+    background: rgba(255,255,255,0.07); color: #DCE2EF;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* ===== How it works ===== */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }
+  .step { position: relative; }
+  .step-num {
+    font-family: var(--serif); font-size: 42px; font-weight: 600;
+    color: var(--cream-deep); -webkit-text-stroke: 1.5px var(--line);
+    margin-bottom: 14px; line-height: 1;
+  }
+  .step h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .step p { font-size: 13.5px; color: var(--slate); }
+
+  /* ===== Tool section ===== */
+  .tool-section { background: var(--cream-deep); }
+  .tool-shell {
+    background: white; border: 1px solid var(--line); border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 30px 70px -30px rgba(15,23,41,0.15);
+  }
+  .tool-header {
+    padding: 22px 28px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--cream);
+  }
+  .tool-header-title { font-family: var(--serif); font-size: 19px; font-weight: 600; }
+  .tool-badge {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    padding: 4px 10px; border-radius: 99px;
+    background: var(--sage-light); color: var(--sage);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .tool-body { padding: 28px; }
+
+  .field-label {
+    font-size: 12px; font-weight: 600; color: var(--slate);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    margin-bottom: 10px;
+  }
+  .bank-pills { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 22px; }
+  .bank-select {
+    width: 100%; padding: 12px 14px; margin-bottom: 22px;
+    border: 1.5px solid var(--line); border-radius: 9px;
+    font-size: 14px; font-family: var(--sans); font-weight: 500;
+    background: var(--cream) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;
+    color: var(--navy); outline: none; cursor: pointer; appearance: none;
+    -webkit-appearance: none; transition: border-color 0.12s;
+  }
+  .bank-select:hover, .bank-select:focus { border-color: var(--amber); background-color: white; }
+  .bank-select optgroup { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--slate-light); }
+  .bank-select option { font-family: var(--sans); font-size: 14px; color: var(--navy); padding: 6px; }
+  .pill {
+    padding: 7px 16px; border-radius: 99px; font-size: 13px; font-weight: 500;
+    border: 1.5px solid var(--line); color: var(--slate); cursor: pointer;
+    background: white; transition: all 0.12s; user-select: none;
+  }
+  .pill:hover { border-color: var(--amber); color: var(--amber-deep); }
+  .pill.active { background: var(--navy); color: var(--cream); border-color: var(--navy); }
+
+  .api-row { margin-bottom: 8px; }
+  .api-input {
+    width: 100%; padding: 11px 14px; border: 1.5px solid var(--line);
+    border-radius: 9px; font-size: 13.5px; font-family: var(--mono);
+    background: var(--cream); color: var(--navy); outline: none;
+    transition: border-color 0.12s;
+  }
+  .api-input:focus { border-color: var(--amber); background: white; }
+  .api-hint { font-size: 12px; color: var(--slate-light); margin-top: 7px; }
+  .api-hint a { color: var(--amber-deep); font-weight: 500; border-bottom: 1px solid var(--amber-light); }
+
+  .steps-box {
+    background: var(--cream); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; margin: 14px 0 22px;
+  }
+  .steps-box p.title { font-size: 12.5px; color: var(--navy); margin-bottom: 8px; font-weight: 600; }
+  .steps-box ol { font-size: 12.5px; color: var(--slate); padding-left: 18px; line-height: 1.9; }
+  .steps-box a { color: var(--amber-deep); font-weight: 500; }
+  .steps-box code {
+    font-family: var(--mono); background: var(--cream-deep); padding: 1px 5px;
+    border-radius: 4px; font-size: 11.5px;
+  }
+
+  .info-strip {
+    background: var(--sage-light); border: 1px solid #c8e0d2;
+    border-radius: 9px; padding: 12px 16px; font-size: 12.5px; color: #225940;
+    margin-bottom: 20px; display: flex; gap: 9px; align-items: flex-start;
+  }
+
+  .upload-zone {
+    border: 2px dashed var(--line); border-radius: 12px;
+    padding: 48px 28px; text-align: center; cursor: pointer;
+    transition: all 0.15s; background: var(--cream);
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--amber); background: var(--amber-light); }
+  .upload-icon {
+    width: 54px; height: 54px; background: var(--amber-light); border-radius: 14px;
+    margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;
+  }
+  .upload-icon svg { width: 26px; height: 26px; stroke: var(--amber-deep); fill: none; stroke-width: 1.8; }
+  .upload-zone h2 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 5px; }
+  .upload-zone p { font-size: 13.5px; color: var(--slate); }
+  .upload-zone .hint { font-size: 12px; color: var(--slate-light); margin-top: 8px; font-family: var(--mono); }
+  input[type=file] { display: none; }
+
+  .error-strip {
+    background: var(--rose-light); border: 1px solid #e8c6c0;
+    border-radius: 9px; padding: 12px 16px; font-size: 13px; color: var(--rose);
+    margin-top: 14px; display: none;
+  }
+
+  #stateProcessing { display: none; }
+  .processing-box { padding: 60px 28px; text-align: center; }
+  .spinner {
+    width: 38px; height: 38px; border: 3px solid var(--line);
+    border-top-color: var(--amber); border-radius: 50%;
+    animation: spin 0.75s linear infinite; margin: 0 auto 18px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #processingMsg { font-family: var(--serif); font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+  .processing-box .sub { font-size: 12.5px; color: var(--slate-light); }
+
+  #stateResult { display: none; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+  .metric { background: var(--cream); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .metric .mlabel { font-size: 11px; color: var(--slate-light); margin-bottom: 5px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.03em; }
+  .metric .mval { font-family: var(--serif); font-size: 21px; font-weight: 600; }
+  .metric.green .mval { color: var(--sage); }
+  .metric.red .mval { color: var(--rose); }
+
+  .result-card { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); background: var(--cream); padding: 0 6px; }
+  .tab { padding: 13px 18px; font-size: 13px; font-weight: 600; color: var(--slate-light); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.active { color: var(--amber-deep); border-bottom-color: var(--amber); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .table-wrap { overflow-x: auto; max-height: 480px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    padding: 11px 16px; text-align: left; font-size: 10.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--slate-light);
+    background: var(--cream); border-bottom: 1px solid var(--line); white-space: nowrap;
+    position: sticky; top: 0;
+  }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--cream-deep); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--cream); }
+  td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+  td.debit { color: var(--rose); font-weight: 500; }
+  td.kredit { color: var(--sage); font-weight: 500; }
+  td.idx { color: var(--slate-light); font-size: 11.5px; font-family: var(--mono); }
+  .kat-badge { font-size: 11px; padding: 3px 10px; border-radius: 99px; background: var(--cream-deep); color: var(--slate); border: 1px solid var(--line); white-space: nowrap; }
+
+  .pivot-wrap { padding: 22px; }
+  .pivot-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .pivot-section { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .pivot-head {
+    padding: 11px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; background: var(--cream); border-bottom: 1px solid var(--line);
+  }
+  .pivot-head.out { color: var(--rose); }
+  .pivot-head.inc { color: var(--sage); }
+  .pivot-item { padding: 10px 16px; border-bottom: 1px solid var(--cream-deep); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pivot-item:last-child { border-bottom: none; }
+  .pivot-left { flex: 1; min-width: 0; }
+  .pivot-name { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pivot-bar-wrap { height: 3px; background: var(--cream-deep); border-radius: 99px; margin-top: 5px; }
+  .pivot-bar { height: 3px; border-radius: 99px; }
+  .pivot-amt { font-size: 12.5px; font-weight: 600; font-family: var(--mono); white-space: nowrap; }
+
+  .actions-row { display: flex; gap: 10px; padding: 18px 22px; border-top: 1px solid var(--line); background: var(--cream); flex-wrap: wrap; }
+  .btn-tool { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; font-family: var(--sans); }
+  .btn-tool svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+  .btn-tool-primary { background: var(--navy); color: var(--cream); }
+  .btn-tool-primary:hover { background: var(--navy-soft); }
+  .btn-tool-sec { background: white; color: var(--slate); border: 1.5px solid var(--line); }
+  .btn-tool-sec:hover { background: var(--cream); }
+
+  /* ===== Footer ===== */
+  .footer {
+    background: var(--navy); color: #8B96AE; padding: 48px 32px 36px;
+  }
+  .footer-inner {
+    max-width: 1120px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    flex-wrap: wrap; gap: 20px;
+  }
+  .footer-logo {
+    font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--cream);
+    margin-bottom: 8px;
+  }
+  .footer-note { font-size: 12.5px; max-width: 380px; }
+  .footer-meta { font-size: 12px; font-family: var(--mono); text-align: right; }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; padding-top: 50px; }
+    .hero h1 { font-size: 34px; }
+    .stats-inner { grid-template-columns: repeat(2, 1fr); }
+    .feature-grid { grid-template-columns: 1fr; }
+    .cat-grid { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .section { padding: 56px 20px; }
+    .metrics { grid-template-columns: repeat(2,1fr); }
+    .pivot-2col { grid-template-columns: 1fr; }
+    .footer-inner { flex-direction: column; align-items: flex-start; }
+    .footer-meta { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo"><span class="mark"></span>Statemate</div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <button id="langToggle" style="font-family:var(--mono);font-size:12px;font-weight:600;background:var(--cream-deep);border:1px solid var(--line);border-radius:99px;padding:6px 13px;cursor:pointer;color:var(--navy);">🌐 ID / EN</button>
+      <a href="#tool" class="nav-cta" data-i18n="nav.cta">Try Now</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div>
+    <div class="eyebrow" data-i18n="hero.eyebrow">Bank Statement to Excel</div>
+    <h1 data-i18n="hero.title">Messy bank statements,<br><em data-i18n-inline="hero.titleEm">made tidy</em> in seconds.</h1>
+    <p class="sub" data-i18n="hero.subtitle">Upload PDF bank statements from 60+ banks in Indonesia — Statemate extracts every transaction, categorizes it automatically, and prepares an Excel file ready for financial reports.</p>
+    <div class="hero-ctas">
+      <a href="#tool" class="btn btn-primary">
+        <span data-i18n="hero.ctaPrimary">Start Converting</span>
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#cara-kerja" class="btn btn-ghost" data-i18n="hero.ctaSecondary">See How It Works</a>
+    </div>
+    <div class="hero-trust" data-i18n="hero.trust">No credit card needed · Data is processed securely, not stored on our servers</div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="floating-badge" data-i18n="hero.badge">23 transactions · 4 seconds</div>
+    <div class="demo-card">
+      <div class="demo-tabs">
+        <div class="demo-tab" data-i18n="hero.tabOriginal">Original PDF</div>
+        <div class="demo-tab active" data-i18n="hero.tabResult">Statemate Result</div>
+      </div>
+      <div class="demo-body">
+        <div class="clean-row head">
+          <span data-i18n="hero.colDate">Date</span><span data-i18n="hero.colDesc">Description</span><span style="text-align:right" data-i18n="hero.colCategory">Category</span><span style="text-align:right" data-i18n="hero.colAmount">Amount</span>
+        </div>
+        <div class="clean-row">
+          <span>03/06</span><span>GAJI PT MAJU BERSAMA</span><span><span class="tag" data-i18n="hero.catSalary">Salary</span></span><span class="amt pos">+12.500.000</span>
+        </div>
+        <div class="clean-row">
+          <span>05/06</span><span>TRANSFER TOKOPEDIA</span><span><span class="tag exp" data-i18n="hero.catShopping">Shopping</span></span><span class="amt neg">−340.000</span>
+        </div>
+        <div class="clean-row">
+          <span>06/06</span><span>BAYAR LISTRIK PLN</span><span><span class="tag exp" data-i18n="hero.catUtilities">Utilities</span></span><span class="amt neg">−580.000</span>
+        </div>
+        <div class="clean-row">
+          <span>08/06</span><span>FEE PROJECT KLIEN</span><span><span class="tag" data-i18n="hero.catFreelance">Freelance</span></span><span class="amt pos">+4.200.000</span>
+        </div>
+        <div class="clean-row">
+          <span>10/06</span><span>GOJEK - GOFOOD</span><span><span class="tag exp" data-i18n="hero.catFood">Food</span></span><span class="amt neg">−85.000</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="perf-divider"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+<!-- ===== STATS ===== -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat"><div class="num" data-i18n="stats.banksNum">60+ Banks</div><div class="label" data-i18n="stats.banksLabel">State-owned, private, sharia, digital, regional</div></div>
+    <div class="stat"><div class="num" data-i18n="stats.catNum">23 Categories</div><div class="label" data-i18n="stats.catLabel">Automatic income & expense tagging</div></div>
+    <div class="stat"><div class="num" data-i18n="stats.timeNum">&lt;30 sec</div><div class="label" data-i18n="stats.timeLabel">Average processing time</div></div>
+    <div class="stat"><div class="num" data-i18n="stats.freeNum">Free</div><div class="label" data-i18n="stats.freeLabel">10 documents to start</div></div>
+  </div>
+</div>
+
+<!-- ===== FEATURES ===== -->
+<section class="section">
+  <div class="section-head">
+    <div class="section-eyebrow" data-i18n="features.eyebrow">Why Statemate</div>
+    <h2 data-i18n="features.title">Built for real bank statements — not clean samples.</h2>
+    <p data-i18n="features.subtitle">Every bank has a different format. Statemate is trained to recognize real transaction patterns, not ideal templates.</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature">
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <h3 data-i18n="features.f1Title">Reads PDFs as-is</h3>
+      <p data-i18n="features.f1Desc">No special format needed. Upload the original PDF from mobile banking or a teller printout — Statemate adapts.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></div>
+      <h3 data-i18n="features.f2Title">Automatic categorization</h3>
+      <p data-i18n="features.f2Desc">23 ready-to-use categories — from salary and business income to taxes and operating costs. Built for real accounting needs.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+      <h3 data-i18n="features.f3Title">Ready-to-use Excel</h3>
+      <p data-i18n="features.f3Desc">Download with three sheets — full transactions, expense pivot, income pivot. Attach directly to your report.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+      <h3 data-i18n="features.f4Title">Seconds, not hours</h3>
+      <p data-i18n="features.f4Desc">No more manual copy-pasting from PDF to spreadsheet. One bank statement done before your coffee gets cold.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <h3 data-i18n="features.f5Title">Fully private</h3>
+      <p data-i18n="features.f5Desc">Your file is processed securely and never stored. Statemate doesn't keep or view your bank statement contents.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <h3 data-i18n="features.f6Title">For every need</h3>
+      <p data-i18n="features.f6Desc">Employees managing personal budgets, SMEs reconciling cash flow, freelancers filing taxes — one tool for everyone.</p>
+    </div>
+  </div>
+</section>
+
+<div class="perf-divider"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+<!-- ===== CATEGORY SHOWCASE ===== -->
+<section class="section cat-section">
+  <div class="section-head">
+    <div class="section-eyebrow" data-i18n="cats.eyebrow">Complete Categorization</div>
+    <h2 data-i18n="cats.title">23 categories, structured like an accountant would.</h2>
+    <p data-i18n="cats.subtitle">Not generic consumer categories — this structure is built for professional financial reports, personal or business.</p>
+  </div>
+  <div class="cat-grid">
+    <div class="cat-col">
+      <div class="cat-col-head in" data-i18n="cats.incomeHead">Income — 7 categories</div>
+      <div class="cat-tags">
+        <span class="cat-tag" data-i18n="cats.in1">Salary & Payroll</span>
+        <span class="cat-tag" data-i18n="cats.in2">Business Income</span>
+        <span class="cat-tag" data-i18n="cats.in3">Freelance Income</span>
+        <span class="cat-tag" data-i18n="cats.in4">Incoming Transfer</span>
+        <span class="cat-tag" data-i18n="cats.in5">Investment & Dividends</span>
+        <span class="cat-tag" data-i18n="cats.in6">Refund & Reimbursement</span>
+        <span class="cat-tag" data-i18n="cats.in7">Other Income</span>
+      </div>
+    </div>
+    <div class="cat-col">
+      <div class="cat-col-head out" data-i18n="cats.expenseHead">Expenses — 16 categories</div>
+      <div class="cat-tags">
+        <span class="cat-tag" data-i18n="cats.ex1">Operating Costs</span>
+        <span class="cat-tag" data-i18n="cats.ex2">Employee Payroll</span>
+        <span class="cat-tag" data-i18n="cats.ex3">Tax</span>
+        <span class="cat-tag" data-i18n="cats.ex4">Online Shopping</span>
+        <span class="cat-tag" data-i18n="cats.ex5">Food & Drink</span>
+        <span class="cat-tag" data-i18n="cats.ex6">Transport & Logistics</span>
+        <span class="cat-tag" data-i18n="cats.ex7">Utilities</span>
+        <span class="cat-tag" data-i18n="cats.ex8">Loans & Installments</span>
+        <span class="cat-tag" data-i18n="cats.ex9">Insurance</span>
+        <span class="cat-tag" data-i18n="cats.ex10">Marketing & Ads</span>
+        <span class="cat-tag" data-i18n="cats.exMore">+ 6 more</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="section" id="cara-kerja">
+  <div class="section-head">
+    <div class="section-eyebrow" data-i18n="how.eyebrow">How It Works</div>
+    <h2 data-i18n="how.title">Three steps, no installation.</h2>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h3 data-i18n="how.s1Title">Sign in with Google</h3>
+      <p data-i18n="how.s1Desc">Log in once with your Google account. No API key, no credit card — your first 10 documents are free.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h3 data-i18n="how.s2Title">Upload your bank statement</h3>
+      <p data-i18n="how.s2Desc">Drag & drop or choose a file. Statemate instantly recognizes the bank and format you uploaded.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h3 data-i18n="how.s3Title">Download a clean Excel file</h3>
+      <p data-i18n="how.s3Desc">Full transactions plus category pivots, ready to attach to a report or analyze further.</p>
+    </div>
+  </div>
+</section>
+
+<div class="perf-divider"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+<!-- ===== TOOL ===== -->
+<section class="section tool-section" id="tool">
+  <div class="section-head">
+    <div class="section-eyebrow" data-i18n="tool.eyebrow">Try It Now</div>
+    <h2 data-i18n="tool.title">Upload your bank statement.</h2>
+    <p data-i18n="tool.subtitle">Your file is processed securely — Statemate never stores your bank statement data.</p>
+  </div>
+
+  <div class="tool-shell">
+    <div class="tool-header">
+      <div class="tool-header-title" data-i18n="tool.headerTitle">Bank Statement Converter</div>
+      <span class="tool-badge" data-i18n="tool.headerBadge">● Ready to use</span>
+    </div>
+
+    <div class="tool-body">
+      <div id="stateUpload">
+        <div class="field-label" data-i18n="tool.bankLabel">Bank (optional — we can auto-detect)</div>
+        <select id="bankSelect" class="bank-select">
+          <option value="Auto-detect" selected data-i18n="tool.autoDetect">✨ Auto-detect (recommended)</option>
+          <optgroup label="Bank BUMN">
+            <option value="BCA">BCA</option>
+            <option value="Mandiri">Mandiri</option>
+            <option value="BNI">BNI</option>
+            <option value="BRI">BRI</option>
+            <option value="BTN">BTN</option>
+          </optgroup>
+          <optgroup label="Bank Swasta Nasional">
+            <option value="CIMB Niaga">CIMB Niaga</option>
+            <option value="Danamon">Danamon</option>
+            <option value="Permata">Permata Bank</option>
+            <option value="OCBC NISP">OCBC NISP</option>
+            <option value="Panin">Panin Bank</option>
+            <option value="Maybank Indonesia">Maybank Indonesia</option>
+            <option value="UOB Indonesia">UOB Indonesia</option>
+            <option value="HSBC Indonesia">HSBC Indonesia</option>
+            <option value="Bank Mega">Bank Mega</option>
+            <option value="Bank Sinarmas">Bank Sinarmas</option>
+            <option value="Bank Index">Bank Index Selindo</option>
+            <option value="Bank Bukopin">Bank Bukopin (KB Bank)</option>
+            <option value="Bank Mestika">Bank Mestika</option>
+            <option value="Bank Sahabat Sampoerna">Bank Sahabat Sampoerna</option>
+            <option value="Bank Woori Saudara">Bank Woori Saudara</option>
+            <option value="Bank Commonwealth">Bank Commonwealth</option>
+            <option value="Bank Capital">Bank Capital Indonesia</option>
+            <option value="Bank Mayapada">Bank Mayapada</option>
+            <option value="Bank Artha Graha">Bank Artha Graha</option>
+            <option value="Bank Ina">Bank Ina Perdana</option>
+          </optgroup>
+          <optgroup label="Bank Syariah">
+            <option value="Bank Syariah Indonesia (BSI)">Bank Syariah Indonesia (BSI)</option>
+            <option value="Bank Muamalat">Bank Muamalat</option>
+            <option value="BCA Syariah">BCA Syariah</option>
+            <option value="CIMB Niaga Syariah">CIMB Niaga Syariah</option>
+            <option value="Bank Mega Syariah">Bank Mega Syariah</option>
+          </optgroup>
+          <optgroup label="Bank Digital">
+            <option value="Jenius (BTPN)">Jenius (BTPN)</option>
+            <option value="Bank Jago">Bank Jago</option>
+            <option value="SeaBank">SeaBank</option>
+            <option value="Allo Bank">Allo Bank</option>
+            <option value="Blu by BCA Digital">blu by BCA Digital</option>
+            <option value="Neo Commerce (Bank Neo)">Neo Commerce (Bank Neo)</option>
+            <option value="Krom Bank">Krom Bank</option>
+            <option value="Superbank">Superbank</option>
+            <option value="Line Bank">Line Bank (Hana)</option>
+          </optgroup>
+          <optgroup label="Bank Pembangunan Daerah (BPD)">
+            <option value="Bank DKI">Bank DKI</option>
+            <option value="Bank Jabar Banten (BJB)">Bank Jabar Banten (BJB)</option>
+            <option value="Bank Jateng">Bank Jateng</option>
+            <option value="Bank Jatim">Bank Jatim</option>
+            <option value="Bank DIY">Bank DIY</option>
+            <option value="Bank Sumut">Bank Sumut</option>
+            <option value="Bank Sumsel Babel">Bank Sumsel Babel</option>
+            <option value="Bank Nagari (Sumbar)">Bank Nagari (Sumbar)</option>
+            <option value="Bank Riau Kepri">Bank Riau Kepri</option>
+            <option value="Bank Lampung">Bank Lampung</option>
+            <option value="Bank Kalbar">Bank Kalbar</option>
+            <option value="Bank Kalsel">Bank Kalsel</option>
+            <option value="Bank Kalteng">Bank Kalteng</option>
+            <option value="Bank Kaltimtara">Bank Kaltimtara</option>
+            <option value="Bank Sulselbar">Bank Sulselbar</option>
+            <option value="Bank Sulut Go">Bank Sulut Go</option>
+            <option value="Bank NTB Syariah">Bank NTB Syariah</option>
+            <option value="Bank NTT">Bank NTT</option>
+            <option value="Bank Maluku Malut">Bank Maluku Malut</option>
+            <option value="Bank Papua">Bank Papua</option>
+            <option value="Bank Banten">Bank Banten</option>
+          </optgroup>
+          <optgroup label="Bank Asing & Lainnya">
+            <option value="Citibank Indonesia">Citibank Indonesia</option>
+            <option value="Standard Chartered">Standard Chartered</option>
+            <option value="Bank of China Indonesia">Bank of China Indonesia</option>
+            <option value="DBS Indonesia">DBS Indonesia</option>
+            <option value="ANZ Indonesia">ANZ Indonesia</option>
+          </optgroup>
+        </select>
+
+        <!-- Logged out state -->
+        <div id="loginBox">
+          <button id="btnGoogleLogin" class="btn-tool btn-tool-primary" style="width:100%;justify-content:center;">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"/></svg>
+            <span data-i18n="tool.loginBtn">Sign in with Google to start</span>
+          </button>
+          <div class="api-hint" style="text-align:center;margin-top:10px;" data-i18n="tool.loginHint">10 free documents per account, no credit card needed.</div>
+        </div>
+
+        <!-- Logged in state -->
+        <div id="userBox" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--cream);border:1px solid var(--line);border-radius:9px;padding:12px 16px;margin-bottom:18px;">
+            <div style="font-size:13px;">
+              <span style="color:var(--slate)" data-i18n="tool.signedInAs">Signed in as</span> <strong id="userEmail"></strong>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span id="quotaBadge" style="font-family:var(--mono);font-size:12px;color:var(--sage);font-weight:600;"></span>
+              <button id="btnUpgrade" style="font-size:12px;color:var(--amber-deep);background:var(--amber-light);border:1px solid #e0bb94;padding:4px 11px;border-radius:99px;cursor:pointer;font-weight:600;">⚡ <span data-i18n="tool.upgradeBtn">Upgrade</span></button>
+              <button id="btnLogout" style="font-size:12px;color:var(--slate-light);background:none;border:none;cursor:pointer;text-decoration:underline;" data-i18n="tool.logoutBtn">Sign out</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-strip">
+          <span>🔒</span>
+          <span data-i18n="tool.infoStrip">Your PDF is processed securely — never permanently stored on our servers.</span>
+        </div>
+
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <h2 data-i18n="tool.dropTitle">Drag & drop your bank statement PDF</h2>
+          <p data-i18n="tool.dropSubtitle">or click to choose a file — multiple months at once supported</p>
+          <p class="hint" data-i18n="tool.dropHint">60+ INDONESIAN BANKS — PDF FORMAT — MAX 20MB</p>
+          <input type="file" id="fileInput" accept=".pdf" multiple>
+        </div>
+        <div class="error-strip" id="errorBox"></div>
+      </div>
+
+      <div id="stateProcessing">
+        <div class="processing-box">
+          <div class="spinner"></div>
+          <p id="processingMsg" data-i18n="tool.readingPdf">Reading PDF...</p>
+          <p class="sub" data-i18n="tool.processingSub">Usually 10–30 seconds depending on the number of transactions</p>
+        </div>
+      </div>
+
+      <div id="stateResult">
+        <div class="metrics" id="metricsRow"></div>
+        <div class="result-card">
+          <div class="tabs">
+            <div class="tab active" data-tab="transaksi" data-i18n="tool.tabAll">All Transactions</div>
+            <div class="tab" data-tab="pivot" data-i18n="tool.tabPivot">Pivot & Summary</div>
+          </div>
+          <div class="tab-content active" id="tab-transaksi">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th data-i18n="tool.thDate">Date</th><th data-i18n="tool.thDesc">Description</th><th data-i18n="tool.thCategory">Category</th><th class="num" data-i18n="tool.thDebit">Debit</th><th class="num" data-i18n="tool.thCredit">Credit</th><th class="num" data-i18n="tool.thBalance">Balance</th></tr></thead>
+                <tbody id="txBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="tab-content" id="tab-pivot">
+            <div class="pivot-wrap"><div class="pivot-2col" id="pivotGrid"></div></div>
+          </div>
+          <div class="actions-row">
+            <button class="btn-tool btn-tool-primary" id="btnExport">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span data-i18n="tool.exportBtn">Download Excel (.xlsx)</span>
+            </button>
+            <button class="btn-tool btn-tool-sec" id="btnReset">
+              <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+              <span data-i18n="tool.resetBtn">Upload another file</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<!-- ===== Pricing Modal ===== -->
+<div id="pricingOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,41,0.55);backdrop-filter:blur(3px);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--cream);border-radius:16px;max-width:680px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 40px 90px -20px rgba(0,0,0,0.4);">
+    <div style="padding:24px 28px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--cream);border-radius:16px 16px 0 0;">
+      <div>
+        <h3 style="font-family:var(--serif);font-size:21px;font-weight:600;" data-i18n="pricing.title">Upgrade Statemate</h3>
+        <p style="font-size:13px;color:var(--slate);margin-top:3px;" data-i18n="pricing.subtitle">Your free quota has been used up. Choose a plan to continue.</p>
+      </div>
+      <button id="btnClosePricing" style="background:none;border:none;font-size:22px;color:var(--slate-light);cursor:pointer;line-height:1;">×</button>
+    </div>
+
+    <div style="padding:0 28px;border-bottom:1px solid var(--line);display:flex;gap:4px;position:sticky;top:73px;background:var(--cream);z-index:1;">
+      <div class="pricing-tab active" data-tab="kredit" style="padding:12px 18px;font-size:13.5px;font-weight:600;color:var(--amber-deep);border-bottom:2px solid var(--amber);cursor:pointer;" data-i18n="pricing.tabCredit">Buy Credits</div>
+      <div class="pricing-tab" data-tab="subscription" style="padding:12px 18px;font-size:13.5px;font-weight:600;color:var(--slate-light);border-bottom:2px solid transparent;cursor:pointer;" data-i18n="pricing.tabSub">Subscription</div>
+    </div>
+
+    <div style="padding:24px 28px;">
+      <!-- Kredit Tab -->
+      <div id="pricing-kredit" class="pricing-panel">
+        <p style="font-size:12.5px;color:var(--slate);margin-bottom:16px;" data-i18n="pricing.creditDesc">Pay once, credits never expire. 1 credit = 1 document.</p>
+        <div style="display:grid;gap:10px;">
+          <div class="pricing-card">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:14.5px;" data-i18n="pricing.c1Title">20 Documents</div>
+              <div style="font-size:12px;color:var(--slate-light);" data-i18n="pricing.c1Sub">Rp 1,250 / document</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:var(--serif);font-weight:600;font-size:17px;">Rp 25.000</div>
+              <button class="btn-pricing-select" data-package="Kredit 20 Dokumen" data-i18n="pricing.selectBtn">Select</button>
+            </div>
+          </div>
+          <div class="pricing-card" style="border-color:var(--amber);">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:14.5px;"><span data-i18n="pricing.c2Title">50 Documents</span> <span style="font-size:10px;background:var(--amber);color:white;padding:2px 7px;border-radius:99px;margin-left:6px;" data-i18n="pricing.popular">Popular</span></div>
+              <div style="font-size:12px;color:var(--slate-light);" data-i18n="pricing.c2Sub">Rp 1,100 / document</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:var(--serif);font-weight:600;font-size:17px;">Rp 55.000</div>
+              <button class="btn-pricing-select" data-package="Kredit 50 Dokumen" data-i18n="pricing.selectBtn">Select</button>
+            </div>
+          </div>
+          <div class="pricing-card">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:14.5px;" data-i18n="pricing.c3Title">150 Documents</div>
+              <div style="font-size:12px;color:var(--slate-light);" data-i18n="pricing.c3Sub">Rp 933 / document</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:var(--serif);font-weight:600;font-size:17px;">Rp 140.000</div>
+              <button class="btn-pricing-select" data-package="Kredit 150 Dokumen" data-i18n="pricing.selectBtn">Select</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subscription Tab -->
+      <div id="pricing-subscription" class="pricing-panel" style="display:none;">
+        <p style="font-size:12.5px;color:var(--slate);margin-bottom:16px;" data-i18n="pricing.subDesc">Pay monthly, quota resets automatically each period.</p>
+        <div style="display:grid;gap:10px;">
+          <div class="pricing-card">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:14.5px;" data-i18n="pricing.s1Title">Starter</div>
+              <div style="font-size:12px;color:var(--slate-light);" data-i18n="pricing.s1Sub">30 documents/month — freelancers & individuals</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:var(--serif);font-weight:600;font-size:17px;">Rp 49rb<span style="font-size:11px;color:var(--slate-light);" data-i18n="pricing.perMonth">/mo</span></div>
+              <button class="btn-pricing-select" data-package="Subscription Starter" data-i18n="pricing.selectBtn">Select</button>
+            </div>
+          </div>
+          <div class="pricing-card" style="border-color:var(--amber);">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:14.5px;"><span data-i18n="pricing.s2Title">Pro</span> <span style="font-size:10px;background:var(--amber);color:white;padding:2px 7px;border-radius:99px;margin-left:6px;" data-i18n="pricing.popular">Popular</span></div>
+              <div style="font-size:12px;color:var(--slate-light);" data-i18n="pricing.s2Sub">150 documents/month — SMEs & consultants</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:var(--serif);font-weight:600;font-size:17px;">Rp 149rb<span style="font-size:11px;color:var(--slate-light);" data-i18n="pricing.perMonth">/mo</span></div>
+              <button class="btn-pricing-select" data-package="Subscription Pro" data-i18n="pricing.selectBtn">Select</button>
+            </div>
+          </div>
+          <div class="pricing-card">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:14.5px;" data-i18n="pricing.s3Title">Business</div>
+              <div style="font-size:12px;color:var(--slate-light);" data-i18n="pricing.s3Sub">500 documents/month — accounting firms & corporates</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:var(--serif);font-weight:600;font-size:17px;">Rp 399rb<span style="font-size:11px;color:var(--slate-light);" data-i18n="pricing.perMonth">/mo</span></div>
+              <button class="btn-pricing-select" data-package="Subscription Business" data-i18n="pricing.selectBtn">Select</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="pricingContactNote" style="display:none;margin-top:18px;background:var(--sage-light);border:1px solid #c8e0d2;border-radius:9px;padding:14px 16px;font-size:13px;color:#225940;">
+        ✅ <span id="pricingContactMsg"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .pricing-card { background:white;border:1px solid var(--line);border-radius:11px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px; }
+  .btn-pricing-select { margin-top:6px;font-size:12px;font-weight:600;padding:6px 16px;border-radius:7px;background:var(--navy);color:white;border:none;cursor:pointer; }
+  .btn-pricing-select:hover { background:var(--navy-soft); }
+  .pricing-tab.active { color:var(--amber-deep) !important;border-bottom-color:var(--amber) !important; }
+</style>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">Statemate</div>
+      <div class="footer-note" data-i18n="footer.note">Built for anyone tired of manually copying bank statements into spreadsheets.</div>
+    </div>
+    <div class="footer-meta" data-i18n="footer.meta">Securely processed — no data is stored</div>
+  </div>
+</footer>
+
+<script>
+// ===== i18n System =====
+const translations = {
+  en: {
+    'nav.cta': 'Try Now',
+    'hero.eyebrow': 'Bank Statement to Excel',
+    'hero.title': 'Messy bank statements,<br><em>made tidy</em> in seconds.',
+    'hero.subtitle': 'Upload PDF bank statements from 60+ banks in Indonesia — Statemate extracts every transaction, categorizes it automatically, and prepares an Excel file ready for financial reports.',
+    'hero.ctaPrimary': 'Start Converting',
+    'hero.ctaSecondary': 'See How It Works',
+    'hero.trust': 'No credit card needed · Data is processed securely, not stored on our servers',
+    'hero.badge': '23 transactions · 4 seconds',
+    'hero.tabOriginal': 'Original PDF',
+    'hero.tabResult': 'Statemate Result',
+    'hero.colDate': 'Date', 'hero.colDesc': 'Description', 'hero.colCategory': 'Category', 'hero.colAmount': 'Amount',
+    'hero.catSalary': 'Salary', 'hero.catShopping': 'Shopping', 'hero.catUtilities': 'Utilities', 'hero.catFreelance': 'Freelance', 'hero.catFood': 'Food',
+    'stats.banksNum': '60+ Banks', 'stats.banksLabel': 'State-owned, private, sharia, digital, regional',
+    'stats.catNum': '23 Categories', 'stats.catLabel': 'Automatic income & expense tagging',
+    'stats.timeNum': '<30 sec', 'stats.timeLabel': 'Average processing time',
+    'stats.freeNum': 'Free', 'stats.freeLabel': '10 documents to start',
+    'features.eyebrow': 'Why Statemate',
+    'features.title': 'Built for real bank statements — not clean samples.',
+    'features.subtitle': 'Every bank has a different format. Statemate is trained to recognize real transaction patterns, not ideal templates.',
+    'features.f1Title': 'Reads PDFs as-is', 'features.f1Desc': 'No special format needed. Upload the original PDF from mobile banking or a teller printout — Statemate adapts.',
+    'features.f2Title': 'Automatic categorization', 'features.f2Desc': '23 ready-to-use categories — from salary and business income to taxes and operating costs. Built for real accounting needs.',
+    'features.f3Title': 'Ready-to-use Excel', 'features.f3Desc': 'Download with three sheets — full transactions, expense pivot, income pivot. Attach directly to your report.',
+    'features.f4Title': 'Seconds, not hours', 'features.f4Desc': "No more manual copy-pasting from PDF to spreadsheet. One bank statement done before your coffee gets cold.",
+    'features.f5Title': 'Fully private', 'features.f5Desc': "Your file is processed securely and never stored. Statemate doesn't keep or view your bank statement contents.",
+    'features.f6Title': 'For every need', 'features.f6Desc': 'Employees managing personal budgets, SMEs reconciling cash flow, freelancers filing taxes — one tool for everyone.',
+    'cats.eyebrow': 'Complete Categorization',
+    'cats.title': '23 categories, structured like an accountant would.',
+    'cats.subtitle': 'Not generic consumer categories — this structure is built for professional financial reports, personal or business.',
+    'cats.incomeHead': 'Income — 7 categories', 'cats.expenseHead': 'Expenses — 16 categories',
+    'cats.in1': 'Salary & Payroll', 'cats.in2': 'Business Income', 'cats.in3': 'Freelance Income', 'cats.in4': 'Incoming Transfer', 'cats.in5': 'Investment & Dividends', 'cats.in6': 'Refund & Reimbursement', 'cats.in7': 'Other Income',
+    'cats.ex1': 'Operating Costs', 'cats.ex2': 'Employee Payroll', 'cats.ex3': 'Tax', 'cats.ex4': 'Online Shopping', 'cats.ex5': 'Food & Drink', 'cats.ex6': 'Transport & Logistics', 'cats.ex7': 'Utilities', 'cats.ex8': 'Loans & Installments', 'cats.ex9': 'Insurance', 'cats.ex10': 'Marketing & Ads', 'cats.exMore': '+ 6 more',
+    'how.eyebrow': 'How It Works', 'how.title': 'Three steps, no installation.',
+    'how.s1Title': 'Sign in with Google', 'how.s1Desc': 'Log in once with your Google account. No API key, no credit card — your first 10 documents are free.',
+    'how.s2Title': 'Upload your bank statement', 'how.s2Desc': 'Drag & drop or choose a file. Statemate instantly recognizes the bank and format you uploaded.',
+    'how.s3Title': 'Download a clean Excel file', 'how.s3Desc': 'Full transactions plus category pivots, ready to attach to a report or analyze further.',
+    'tool.eyebrow': 'Try It Now', 'tool.title': 'Upload your bank statement.',
+    'tool.subtitle': 'Your file is processed securely — Statemate never stores your bank statement data.',
+    'tool.headerTitle': 'Bank Statement Converter', 'tool.headerBadge': '● Ready to use',
+    'tool.bankLabel': 'Bank (optional — we can auto-detect)', 'tool.autoDetect': '✨ Auto-detect (recommended)',
+    'tool.loginBtn': 'Sign in with Google to start', 'tool.loginHint': '10 free documents per account, no credit card needed.',
+    'tool.signedInAs': 'Signed in as', 'tool.upgradeBtn': 'Upgrade', 'tool.logoutBtn': 'Sign out',
+    'tool.infoStrip': 'Your PDF is processed securely — never permanently stored on our servers.',
+    'tool.dropTitle': 'Drag & drop your bank statement PDF', 'tool.dropSubtitle': 'or click to choose a file — multiple months at once supported',
+    'tool.dropHint': '60+ INDONESIAN BANKS — PDF FORMAT — MAX 20MB',
+    'tool.readingPdf': 'Reading PDF...', 'tool.processingSub': 'Usually 10–30 seconds depending on the number of transactions',
+    'tool.tabAll': 'All Transactions', 'tool.tabPivot': 'Pivot & Summary',
+    'tool.thDate': 'Date', 'tool.thDesc': 'Description', 'tool.thCategory': 'Category', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Credit', 'tool.thBalance': 'Balance',
+    'tool.exportBtn': 'Download Excel (.xlsx)', 'tool.resetBtn': 'Upload another file',
+    'pricing.title': 'Upgrade Statemate', 'pricing.subtitle': 'Your free quota has been used up. Choose a plan to continue.',
+    'pricing.tabCredit': 'Buy Credits', 'pricing.tabSub': 'Subscription',
+    'pricing.creditDesc': 'Pay once, credits never expire. 1 credit = 1 document.',
+    'pricing.c1Title': '20 Documents', 'pricing.c1Sub': 'Rp 1,250 / document',
+    'pricing.c2Title': '50 Documents', 'pricing.c2Sub': 'Rp 1,100 / document',
+    'pricing.c3Title': '150 Documents', 'pricing.c3Sub': 'Rp 933 / document',
+    'pricing.popular': 'Popular', 'pricing.selectBtn': 'Select', 'pricing.perMonth': '/mo',
+    'pricing.subDesc': 'Pay monthly, quota resets automatically each period.',
+    'pricing.s1Title': 'Starter', 'pricing.s1Sub': '30 documents/month — freelancers & individuals',
+    'pricing.s2Title': 'Pro', 'pricing.s2Sub': '150 documents/month — SMEs & consultants',
+    'pricing.s3Title': 'Business', 'pricing.s3Sub': '500 documents/month — accounting firms & corporates',
+    'pricing.thankYou': 'Thank you! Our team will contact you at',
+    'pricing.forActivation': 'to activate the',
+    'pricing.plan': 'plan',
+    'footer.note': 'Built for anyone tired of manually copying bank statements into spreadsheets.',
+    'footer.meta': 'Securely processed — no data is stored',
+    'js.onlyPdf': 'Only PDF files are supported.',
+    'js.loginFirst': 'Please sign in with Google first to start converting.',
+    'js.processingFile': 'Processing file {i} of {n}: {name}...',
+    'js.readingDetecting': 'Reading and detecting bank from PDF...',
+    'js.quotaUsedUp': 'Your free quota has been used up. Choose a plan below to continue.',
+    'js.allFilesFailed': 'All files failed to process.',
+    'js.detectedBank': 'Detected bank:',
+    'js.enterApiKey': 'Please sign in with Google.',
+    'js.otherCategory': 'Other',
+    'js.expenseByCategory': 'Expenses by Category',
+    'js.incomeByCategory': 'Income by Category',
+    'js.noData': 'No data',
+  },
+  id: {
+    'nav.cta': 'Coba Sekarang',
+    'hero.eyebrow': 'Rekening Koran ke Excel',
+    'hero.title': 'Rekening koran berantakan,<br><em>jadi rapi</em> dalam hitungan detik.',
+    'hero.subtitle': 'Upload PDF rekening koran dari 60+ bank di Indonesia — Statemate mengekstrak setiap transaksi, mengelompokkannya otomatis, dan menyiapkan Excel yang siap dipakai untuk laporan keuangan.',
+    'hero.ctaPrimary': 'Mulai Konversi',
+    'hero.ctaSecondary': 'Lihat Cara Kerja',
+    'hero.trust': 'Tidak perlu kartu kredit · Data diproses dengan aman, tidak disimpan di server kami',
+    'hero.badge': '23 transaksi · 4 detik',
+    'hero.tabOriginal': 'PDF Asli',
+    'hero.tabResult': 'Hasil Statemate',
+    'hero.colDate': 'Tgl', 'hero.colDesc': 'Keterangan', 'hero.colCategory': 'Kategori', 'hero.colAmount': 'Jumlah',
+    'hero.catSalary': 'Gaji', 'hero.catShopping': 'Belanja', 'hero.catUtilities': 'Utilitas', 'hero.catFreelance': 'Freelance', 'hero.catFood': 'Makan',
+    'stats.banksNum': '60+ Bank', 'stats.banksLabel': 'BUMN, swasta, syariah, digital, BPD',
+    'stats.catNum': '23 Kategori', 'stats.catLabel': 'Income & pengeluaran otomatis',
+    'stats.timeNum': '<30 detik', 'stats.timeLabel': 'Rata-rata waktu proses',
+    'stats.freeNum': 'Gratis', 'stats.freeLabel': '10 dokumen untuk mulai',
+    'features.eyebrow': 'Mengapa Statemate',
+    'features.title': 'Dibuat untuk rekening koran yang sebenarnya — bukan contoh yang rapi.',
+    'features.subtitle': 'Setiap bank punya format berbeda. Statemate dilatih untuk mengenali pola transaksi yang sesungguhnya, bukan template ideal.',
+    'features.f1Title': 'Baca PDF apa adanya', 'features.f1Desc': 'Tidak perlu format khusus. Upload PDF asli dari mobile banking atau hasil print teller — Statemate yang menyesuaikan.',
+    'features.f2Title': 'Kategorisasi otomatis', 'features.f2Desc': '23 kategori siap pakai — dari gaji dan pendapatan usaha hingga pajak dan biaya operasional. Disusun untuk kebutuhan akuntansi nyata.',
+    'features.f3Title': 'Excel siap pakai', 'features.f3Desc': 'Unduh dalam tiga sheet — transaksi lengkap, pivot pengeluaran, pivot pemasukan. Langsung lampirkan ke laporan.',
+    'features.f4Title': 'Hitungan detik, bukan jam', 'features.f4Desc': 'Tidak ada lagi salin-tempel manual dari PDF ke spreadsheet. Satu rekening koran selesai sebelum kopi kamu dingin.',
+    'features.f5Title': 'Privat sepenuhnya', 'features.f5Desc': 'File diproses dengan aman dan tidak pernah disimpan. Statemate tidak menyimpan atau melihat isi rekening koran kamu.',
+    'features.f6Title': 'Untuk semua kebutuhan', 'features.f6Desc': 'Karyawan yang menyusun anggaran pribadi, UMKM yang rekonsiliasi kas, freelancer yang melapor pajak — satu tool untuk semua.',
+    'cats.eyebrow': 'Kategorisasi Lengkap',
+    'cats.title': '23 kategori, disusun seperti akuntan menyusunnya.',
+    'cats.subtitle': 'Bukan kategori generik konsumen — ini struktur yang dipakai untuk laporan keuangan profesional, baik personal maupun bisnis.',
+    'cats.incomeHead': 'Pemasukan — 7 kategori', 'cats.expenseHead': 'Pengeluaran — 16 kategori',
+    'cats.in1': 'Gaji & Payroll', 'cats.in2': 'Pendapatan Usaha', 'cats.in3': 'Pendapatan Freelance', 'cats.in4': 'Transfer Masuk', 'cats.in5': 'Investasi & Dividen', 'cats.in6': 'Refund & Reimbursement', 'cats.in7': 'Pendapatan Lainnya',
+    'cats.ex1': 'Biaya Operasional', 'cats.ex2': 'Gaji Karyawan', 'cats.ex3': 'Pajak (PPh/PPN)', 'cats.ex4': 'Belanja Online', 'cats.ex5': 'Makan & Minum', 'cats.ex6': 'Transport & Logistik', 'cats.ex7': 'Utilitas', 'cats.ex8': 'Cicilan & Pinjaman', 'cats.ex9': 'Asuransi', 'cats.ex10': 'Marketing & Iklan', 'cats.exMore': '+ 6 lainnya',
+    'how.eyebrow': 'Cara Kerja', 'how.title': 'Tiga langkah, tanpa instalasi.',
+    'how.s1Title': 'Masuk dengan Google', 'how.s1Desc': 'Login sekali pakai akun Google kamu. Tidak perlu API key, tidak perlu kartu kredit — 10 dokumen pertama gratis.',
+    'how.s2Title': 'Upload PDF rekening koran', 'how.s2Desc': 'Drag & drop atau pilih file. Statemate langsung mengenali bank dan format yang kamu unggah.',
+    'how.s3Title': 'Unduh Excel yang rapi', 'how.s3Desc': 'Transaksi lengkap plus pivot per kategori, siap dilampirkan ke laporan atau dianalisis lebih lanjut.',
+    'tool.eyebrow': 'Coba Sekarang', 'tool.title': 'Upload rekening koran kamu.',
+    'tool.subtitle': 'File kamu diproses dengan aman — Statemate tidak pernah menyimpan data rekening koran kamu.',
+    'tool.headerTitle': 'Konverter Rekening Koran', 'tool.headerBadge': '● Siap dipakai',
+    'tool.bankLabel': 'Bank (opsional — kami bisa deteksi otomatis)', 'tool.autoDetect': '✨ Auto-detect (rekomendasi)',
+    'tool.loginBtn': 'Masuk dengan Google untuk mulai', 'tool.loginHint': '10 dokumen gratis setiap akun, tanpa kartu kredit.',
+    'tool.signedInAs': 'Masuk sebagai', 'tool.upgradeBtn': 'Upgrade', 'tool.logoutBtn': 'Keluar',
+    'tool.infoStrip': 'File PDF kamu diproses dengan aman — tidak disimpan secara permanen di server kami.',
+    'tool.dropTitle': 'Drag & drop PDF rekening koran', 'tool.dropSubtitle': 'atau klik untuk pilih file — bisa beberapa bulan sekaligus',
+    'tool.dropHint': '60+ BANK INDONESIA — FORMAT PDF — MAKS 20MB',
+    'tool.readingPdf': 'Membaca PDF...', 'tool.processingSub': 'Biasanya 10–30 detik tergantung jumlah transaksi',
+    'tool.tabAll': 'Semua Transaksi', 'tool.tabPivot': 'Pivot & Ringkasan',
+    'tool.thDate': 'Tanggal', 'tool.thDesc': 'Keterangan', 'tool.thCategory': 'Kategori', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Kredit', 'tool.thBalance': 'Saldo',
+    'tool.exportBtn': 'Download Excel (.xlsx)', 'tool.resetBtn': 'Upload file lain',
+    'pricing.title': 'Upgrade Statemate', 'pricing.subtitle': 'Kuota gratis kamu sudah dipakai. Pilih paket untuk lanjut.',
+    'pricing.tabCredit': 'Beli Kredit', 'pricing.tabSub': 'Subscription',
+    'pricing.creditDesc': 'Bayar sekali, kredit tidak ada batas waktu. 1 kredit = 1 dokumen.',
+    'pricing.c1Title': '20 Dokumen', 'pricing.c1Sub': 'Rp 1.250 / dokumen',
+    'pricing.c2Title': '50 Dokumen', 'pricing.c2Sub': 'Rp 1.100 / dokumen',
+    'pricing.c3Title': '150 Dokumen', 'pricing.c3Sub': 'Rp 933 / dokumen',
+    'pricing.popular': 'Populer', 'pricing.selectBtn': 'Pilih', 'pricing.perMonth': '/bln',
+    'pricing.subDesc': 'Bayar per bulan, kuota reset otomatis setiap periode.',
+    'pricing.s1Title': 'Starter', 'pricing.s1Sub': '30 dokumen/bulan — freelancer & individu',
+    'pricing.s2Title': 'Pro', 'pricing.s2Sub': '150 dokumen/bulan — UMKM & konsultan',
+    'pricing.s3Title': 'Business', 'pricing.s3Sub': '500 dokumen/bulan — kantor akuntan & korporat',
+    'pricing.thankYou': 'Terima kasih! Tim kami akan menghubungi kamu di',
+    'pricing.forActivation': 'untuk aktivasi paket',
+    'pricing.plan': '',
+    'footer.note': 'Dibuat untuk siapa pun yang lelah menyalin rekening koran ke spreadsheet secara manual.',
+    'footer.meta': 'Diproses dengan aman — tidak ada data tersimpan',
+    'js.onlyPdf': 'Hanya file PDF yang didukung.',
+    'js.loginFirst': 'Silakan masuk dengan Google terlebih dahulu untuk mulai konversi.',
+    'js.processingFile': 'Memproses file {i} dari {n}: {name}...',
+    'js.readingDetecting': 'Membaca dan mendeteksi bank dari PDF...',
+    'js.quotaUsedUp': 'Kuota gratis kamu sudah habis. Pilih paket di bawah untuk lanjut.',
+    'js.allFilesFailed': 'Semua file gagal diproses.',
+    'js.detectedBank': 'Bank terdeteksi:',
+    'js.enterApiKey': 'Silakan masuk dengan Google.',
+    'js.otherCategory': 'Lainnya',
+    'js.expenseByCategory': 'Pengeluaran per Kategori',
+    'js.incomeByCategory': 'Pemasukan per Kategori',
+    'js.noData': 'Tidak ada data',
+  }
+};
+
+let currentLang = 'en';
+
+function t(key) {
+  return (translations[currentLang] && translations[currentLang][key]) || translations.en[key] || key;
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    // Allow HTML for keys that contain tags like <br> or <em>
+    if (val.includes('<')) {
+      el.innerHTML = val;
+    } else {
+      el.textContent = val;
+    }
+  });
+  document.documentElement.lang = currentLang;
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('statemate_lang', lang);
+  applyTranslations();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const savedLang = localStorage.getItem('statemate_lang');
+  if (savedLang === 'id' || savedLang === 'en') {
+    currentLang = savedLang;
+  }
+  applyTranslations();
+});
+
+document.getElementById('langToggle').addEventListener('click', () => {
+  setLanguage(currentLang === 'en' ? 'id' : 'en');
+});
+
+// ===== Supabase Setup =====
+const SUPABASE_URL = 'https://ymgslzierdkhaefgmqnw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltZ3NsemllcmRraGFlZmdtcW53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTgyNTcsImV4cCI6MjA5NzMzNDI1N30.kk5JBwteNXmgPN0y78RyWyEGH11gqtR6QNbfOmXWGD4';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentSession = null;
+
+async function initAuth() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  updateAuthUI(session);
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    updateAuthUI(session);
+  });
+}
+
+async function updateAuthUI(session) {
+  currentSession = session;
+  if (session) {
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('userBox').style.display = 'block';
+    document.getElementById('userEmail').textContent = session.user.email;
+    await refreshQuotaBadge();
+  } else {
+    document.getElementById('loginBox').style.display = 'block';
+    document.getElementById('userBox').style.display = 'none';
+  }
+}
+
+async function refreshQuotaBadge() {
+  if (!currentSession) return;
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('upload_count, free_limit')
+    .eq('id', currentSession.user.id)
+    .single();
+  const badge = document.getElementById('quotaBadge');
+  if (data && !error) {
+    const remaining = data.free_limit - data.upload_count;
+    badge.textContent = `${remaining}/${data.free_limit} kuota gratis tersisa`;
+    badge.style.color = remaining > 0 ? 'var(--sage)' : 'var(--rose)';
+  }
+}
+
+document.getElementById('btnGoogleLogin').addEventListener('click', async () => {
+  await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+});
+
+document.getElementById('btnLogout').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+});
+
+// ===== Pricing Modal Logic =====
+function openPricingModal() {
+  document.getElementById('pricingOverlay').style.display = 'flex';
+  document.getElementById('pricingContactNote').style.display = 'none';
+}
+
+function closePricingModal() {
+  document.getElementById('pricingOverlay').style.display = 'none';
+}
+
+document.getElementById('btnUpgrade').addEventListener('click', openPricingModal);
+document.getElementById('btnClosePricing').addEventListener('click', closePricingModal);
+document.getElementById('pricingOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'pricingOverlay') closePricingModal();
+});
+
+document.querySelectorAll('.pricing-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.pricing-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.pricing-panel').forEach(p => p.style.display = 'none');
+    tab.classList.add('active');
+    document.getElementById('pricing-' + tab.dataset.tab).style.display = 'block';
+    document.getElementById('pricingContactNote').style.display = 'none';
+  });
+});
+
+document.querySelectorAll('.btn-pricing-select').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pkg = btn.dataset.package;
+    const email = currentSession?.user?.email || '';
+    const msg = `${t('pricing.thankYou')} <strong>${email}</strong> ${t('pricing.forActivation')} <strong>${pkg}</strong> ${t('pricing.plan')}`.trim();
+    document.getElementById('pricingContactMsg').innerHTML = msg;
+    document.getElementById('pricingContactNote').style.display = 'block';
+    console.log(`[Statemate] User memilih paket: ${pkg} (${email})`);
+    // TODO: integrasi payment gateway (Midtrans/Xendit) di sini
+  });
+});
+
+initAuth();
+
+let selectedBank = 'Auto-detect';
+let parsedData = null;
+
+document.getElementById('bankSelect').addEventListener('change', (e) => {
+  selectedBank = e.target.value;
+});
+
+const zone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+zone.addEventListener('click', () => fileInput.click());
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('drag');
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+  if (files.length) handleFiles(files);
+  else showError(t('js.onlyPdf'));
+});
+fileInput.addEventListener('change', () => {
+  const files = Array.from(fileInput.files);
+  if (files.length) handleFiles(files);
+});
+
+function showError(msg) { const b = document.getElementById('errorBox'); b.textContent = msg; b.style.display = 'block'; }
+function hideError() { document.getElementById('errorBox').style.display = 'none'; }
+function fmtRp(n) { if (n === null || n === undefined || n === '') return '—'; return 'Rp ' + Math.round(Number(n)).toLocaleString('id-ID'); }
+
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function tryParseJSON(text) {
+  // Coba parse langsung dulu
+  try { return JSON.parse(text); } catch(e) {}
+
+  // Kalau gagal, kemungkinan terpotong di tengah. Coba perbaiki:
+  // potong ke transaksi lengkap terakhir, lalu tutup array & object
+  let repaired = text;
+
+  // Hapus karakter trailing yang tidak lengkap setelah tanda kurung kurawal terakhir yang valid
+  const lastCompleteObj = repaired.lastIndexOf('},');
+  if (lastCompleteObj === -1) return null;
+
+  repaired = repaired.slice(0, lastCompleteObj + 1); // sertakan '}'
+  repaired += ']'; // tutup array transaksi
+
+  // Tutup object utama jika diperlukan
+  const openBraces = (repaired.match(/{/g) || []).length;
+  const closeBraces = (repaired.match(/}/g) || []).length;
+  for (let i = 0; i < (openBraces - closeBraces); i++) {
+    repaired += '}';
+  }
+
+  try { return JSON.parse(repaired); } catch(e) { return null; }
+}
+
+async function handleFiles(files) {
+  if (!currentSession) {
+    showError(t('js.loginFirst'));
+    return;
+  }
+  hideError();
+  document.getElementById('stateUpload').style.display = 'none';
+  document.getElementById('stateProcessing').style.display = 'block';
+
+  const msgEl = document.getElementById('processingMsg');
+  const combined = { bank: selectedBank, periode: '', transaksi: [] };
+  const periods = [];
+  const detectedBanks = [];
+  let anyRepaired = false;
+  const failedFiles = [];
+  let quotaExceeded = false;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+
+    if (quotaExceeded) {
+      failedFiles.push({ name: file.name, error: 'Kuota habis, tidak diproses' });
+      continue;
+    }
+
+    msgEl.textContent = files.length > 1
+      ? t('js.processingFile').replace('{i}', i + 1).replace('{n}', files.length).replace('{name}', file.name)
+      : t('js.readingDetecting');
+
+    console.log(`[Statemate] Mulai proses file ${i+1}/${files.length}: ${file.name}`);
+
+    try {
+      const result = await processOneFile(file, msgEl);
+      const txCount = (result.data.transaksi || []).length;
+      console.log(`[Statemate] BERHASIL: ${file.name} -> ${txCount} transaksi, bank: ${result.data.bank}, periode: ${result.data.periode}`);
+      combined.transaksi.push(...(result.data.transaksi || []));
+      if (result.data.periode) periods.push(result.data.periode);
+      if (result.data.bank && !detectedBanks.includes(result.data.bank)) detectedBanks.push(result.data.bank);
+      if (result.wasRepaired) anyRepaired = true;
+    } catch (e) {
+      console.error(`[Statemate] GAGAL: ${file.name} | ${e.message}`);
+      if (e.message === 'QUOTA_EXCEEDED') {
+        quotaExceeded = true;
+        failedFiles.push({ name: file.name, error: 'Kuota gratis habis' });
+      } else {
+        failedFiles.push({ name: file.name, error: e.message });
+      }
+    }
+
+    if (i < files.length - 1) {
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+
+  await refreshQuotaBadge();
+  console.log(`[Statemate] Selesai semua. Total transaksi gabungan: ${combined.transaksi.length} | Gagal: ${failedFiles.length}`);
+
+  document.getElementById('stateProcessing').style.display = 'none';
+
+  if (combined.transaksi.length === 0) {
+    document.getElementById('stateUpload').style.display = 'block';
+    if (quotaExceeded) {
+      showError(t('js.quotaUsedUp'));
+      openPricingModal();
+    } else {
+      showError(t('js.allFilesFailed') + ' ' + (failedFiles[0]?.error || ''));
+    }
+    return;
+  }
+
+  combined.bank = detectedBanks.length ? detectedBanks.join(', ') : selectedBank;
+  combined.periode = periods.join(', ');
+  // Urutkan transaksi gabungan berdasarkan tanggal
+  combined.transaksi.sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+  parsedData = combined;
+
+  document.getElementById('stateResult').style.display = 'block';
+  renderResult(combined, anyRepaired, failedFiles);
+}
+
+async function processOneFile(file, msgEl) {
+  const b64 = await toBase64(file);
+
+  let res;
+  try {
+    res = await fetch(
+      `${SUPABASE_URL}/functions/v1/process-statement`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentSession.access_token}`
+        },
+        body: JSON.stringify({
+          fileBase64: b64,
+          bank: selectedBank,
+          outputLang: currentLang
+        })
+      }
+    );
+  } catch (fetchErr) {
+    throw new Error('Gagal terhubung ke server: ' + fetchErr.message);
+  }
+
+  const resBody = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    if (resBody.error === 'QUOTA_EXCEEDED') {
+      throw new Error('QUOTA_EXCEEDED');
+    }
+    const msg = resBody.error || resBody.message || `Server error ${res.status}`;
+    console.warn(`[Statemate] Server error: status ${res.status} | ${msg}`);
+    throw new Error(msg);
+  }
+
+  if (!resBody.data) {
+    throw new Error('Respons server tidak lengkap.');
+  }
+
+  return { data: resBody.data, wasRepaired: false };
+}
+
+function renderResult(d, wasRepaired, failedFiles) {
+  document.getElementById('stateProcessing').style.display = 'none';
+  document.getElementById('stateResult').style.display = 'block';
+
+  if (wasRepaired) {
+    const existing = document.getElementById('repairWarning');
+    if (!existing) {
+      const warn = document.createElement('div');
+      warn.id = 'repairWarning';
+      warn.style = 'background:var(--amber-light);border:1px solid #e0bb94;border-radius:9px;padding:12px 16px;font-size:12.5px;color:var(--amber-deep);margin-bottom:16px;display:flex;gap:9px;';
+      warn.innerHTML = '<span>⚠️</span><span>Respons AI terpotong karena jumlah transaksi cukup banyak — beberapa transaksi terakhir mungkin tidak masuk. Cek total transaksi di bawah, dan jika kurang, coba upload ulang atau pisahkan PDF per bulan.</span>';
+      document.getElementById('metricsRow').before(warn);
+    }
+  } else {
+    const existing = document.getElementById('repairWarning');
+    if (existing) existing.remove();
+  }
+
+  const existingFailWarn = document.getElementById('failedFilesWarning');
+  if (existingFailWarn) existingFailWarn.remove();
+  if (failedFiles && failedFiles.length) {
+    const warn = document.createElement('div');
+    warn.id = 'failedFilesWarning';
+    warn.style = 'background:var(--rose-light);border:1px solid #e8c6c0;border-radius:9px;padding:12px 16px;font-size:12.5px;color:var(--rose);margin-bottom:16px;display:flex;gap:9px;';
+    const list = failedFiles.map(f => `${f.name} (${f.error})`).join(', ');
+    warn.innerHTML = `<span>❌</span><span>${failedFiles.length} file gagal diproses dan tidak termasuk dalam hasil: ${list}. Coba upload ulang file tersebut secara terpisah.</span>`;
+    document.getElementById('metricsRow').before(warn);
+  }
+
+  const txs = d.transaksi || [];
+  const totalDebit = txs.reduce((s,t) => s + (parseFloat(t.debit)||0), 0);
+  const totalKredit = txs.reduce((s,t) => s + (parseFloat(t.kredit)||0), 0);
+  const saldoAkhir = txs.length > 0 ? (parseFloat(txs[txs.length-1].saldo)||0) : 0;
+
+  const existingBankBadge = document.getElementById('detectedBankBadge');
+  if (existingBankBadge) existingBankBadge.remove();
+  if (d.bank) {
+    const badge = document.createElement('div');
+    badge.id = 'detectedBankBadge';
+    badge.style = 'font-size:12.5px;color:var(--slate);margin-bottom:12px;display:flex;align-items:center;gap:6px;';
+    badge.innerHTML = `<span style="font-size:14px;">🏦</span><span>Bank terdeteksi: <strong style="color:var(--navy);">${d.bank}</strong></span>`;
+    document.getElementById('metricsRow').before(badge);
+  }
+
+  document.getElementById('metricsRow').innerHTML = [
+    { label: 'Total Transaksi', val: txs.length, cls: '' },
+    { label: 'Total Keluar', val: fmtRp(totalDebit), cls: 'red' },
+    { label: 'Total Masuk', val: fmtRp(totalKredit), cls: 'green' },
+    { label: 'Saldo Akhir', val: fmtRp(saldoAkhir), cls: '' }
+  ].map(m => `<div class="metric ${m.cls}"><div class="mlabel">${m.label}</div><div class="mval">${m.val}</div></div>`).join('');
+
+  document.getElementById('txBody').innerHTML = txs.map((t,i) => `
+    <tr>
+      <td class="idx">${i+1}</td>
+      <td style="white-space:nowrap">${t.tanggal||'—'}</td>
+      <td style="max-width:260px;word-break:break-word">${t.keterangan||'—'}</td>
+      <td><span class="kat-badge">${t.kategori||'—'}</span></td>
+      <td class="num debit">${t.debit ? fmtRp(t.debit) : '—'}</td>
+      <td class="num kredit">${t.kredit ? fmtRp(t.kredit) : '—'}</td>
+      <td class="num">${fmtRp(t.saldo)}</td>
+    </tr>`).join('');
+
+  const byD={}, byK={};
+  txs.forEach(t => {
+    const k = t.kategori||t('js.otherCategory');
+    if (t.debit) byD[k] = (byD[k]||0) + parseFloat(t.debit);
+    if (t.kredit) byK[k] = (byK[k]||0) + parseFloat(t.kredit);
+  });
+
+  const dC = ['#A23E3E','#C2682E','#9C4F1F','#B5552E','#7D3C98','#34495E','#16A085','#7F8C8D','#E91E63','#A04000','#9B59B6','#F39C12','#1ABC9C','#C0392B','#E67E22','#D35400'];
+  const kC = ['#3D7A5C','#27AE60','#1A7A4A','#148A45','#0E6B3A','#2E8B57','#3CB371'];
+
+  function pivot(obj, colors, cls, title) {
+    const e = Object.entries(obj).sort((a,b)=>b[1]-a[1]);
+    if (!e.length) return `<div class="pivot-section"><div class="pivot-head ${cls}">${title}</div><div class="pivot-item" style="color:var(--slate-light)">${t('js.noData')}</div></div>`;
+    const max = e[0][1];
+    return `<div class="pivot-section"><div class="pivot-head ${cls}">${title}</div>${
+      e.map(([k,v],i) => `<div class="pivot-item">
+        <div class="pivot-left">
+          <div class="pivot-name">${k}</div>
+          <div class="pivot-bar-wrap"><div class="pivot-bar" style="width:${Math.round(v/max*100)}%;background:${colors[i%colors.length]}"></div></div>
+        </div>
+        <div class="pivot-amt" style="color:${colors[i%colors.length]}">${fmtRp(v)}</div>
+      </div>`).join('')
+    }</div>`;
+  }
+
+  document.getElementById('pivotGrid').innerHTML =
+    pivot(byD, dC, 'out', '💸 ' + t('js.expenseByCategory')) +
+    pivot(byK, kC, 'inc', '💰 ' + t('js.incomeByCategory'));
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  parsedData = null;
+  document.getElementById('stateResult').style.display = 'none';
+  document.getElementById('stateUpload').style.display = 'block';
+  fileInput.value = '';
+});
+
+document.getElementById('btnExport').addEventListener('click', () => {
+  if (!parsedData) return;
+  const txs = parsedData.transaksi || [];
+  const txRows = txs.map(t => ({
+    'Tanggal': t.tanggal||'', 'Keterangan': t.keterangan||'', 'Kategori': t.kategori||'',
+    'Debit (Keluar)': t.debit||'', 'Kredit (Masuk)': t.kredit||'', 'Saldo': t.saldo||''
+  }));
+  const byD={}, byK={};
+  txs.forEach(t => {
+    const k=t.kategori||t('js.otherCategory');
+    if(t.debit) byD[k]=(byD[k]||0)+parseFloat(t.debit);
+    if(t.kredit) byK[k]=(byK[k]||0)+parseFloat(t.kredit);
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txRows), 'Transaksi');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(byD).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({Kategori:k,'Total Keluar':Math.round(v)}))), 'Pivot Pengeluaran');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(byK).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({Kategori:k,'Total Masuk':Math.round(v)}))), 'Pivot Pemasukan');
+  const bank = (parsedData.bank||selectedBank).replace(/\s+/g,'_');
+  const periode = (parsedData.periode||'').replace(/\s+/g,'_');
+  XLSX.writeFile(wb, `statemate_${bank}_${periode||Date.now()}.xlsx`);
+});
+</script>
+</body>
+</html>
