@@ -516,7 +516,7 @@
     <div class="nav-logo"><span class="mark"></span>Statemate</div>
     <div style="display:flex;align-items:center;gap:14px;">
       <button id="langToggle" style="font-family:var(--mono);font-size:12px;font-weight:600;background:var(--cream-deep);border:1px solid var(--line);border-radius:99px;padding:6px 13px;cursor:pointer;color:var(--navy);">🌐 ID / EN</button>
-      <a href="#tool" class="nav-cta" data-i18n="nav.cta">Try Now</a>
+      <a href="#tool" class="nav-cta" id="navTryNow" data-i18n="nav.cta">Try Now</a>
     </div>
   </div>
 </nav>
@@ -882,8 +882,8 @@
     </div>
 
     <div style="padding:0 28px;border-bottom:1px solid var(--line);display:flex;gap:4px;position:sticky;top:73px;background:var(--cream);z-index:1;">
-      <div class="pricing-tab active" data-tab="kredit" style="padding:12px 18px;font-size:13.5px;font-weight:600;color:var(--amber-deep);border-bottom:2px solid var(--amber);cursor:pointer;" data-i18n="pricing.tabCredit">Buy Credits</div>
-      <div class="pricing-tab" data-tab="subscription" style="padding:12px 18px;font-size:13.5px;font-weight:600;color:var(--slate-light);border-bottom:2px solid transparent;cursor:pointer;" data-i18n="pricing.tabSub">Subscription</div>
+      <div class="pricing-tab active" data-tab="kredit" style="padding:12px 18px;font-size:13.5px;font-weight:600;cursor:pointer;" data-i18n="pricing.tabCredit">Buy Credits</div>
+      <div class="pricing-tab" data-tab="subscription" style="padding:12px 18px;font-size:13.5px;font-weight:600;cursor:pointer;" data-i18n="pricing.tabSub">Subscription</div>
     </div>
 
     <div style="padding:24px 28px;">
@@ -972,7 +972,8 @@
   .pricing-card { background:white;border:1px solid var(--line);border-radius:11px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px; }
   .btn-pricing-select { margin-top:6px;font-size:12px;font-weight:600;padding:6px 16px;border-radius:7px;background:var(--navy);color:white;border:none;cursor:pointer; }
   .btn-pricing-select:hover { background:var(--navy-soft); }
-  .pricing-tab.active { color:var(--amber-deep) !important;border-bottom-color:var(--amber) !important; }
+  .pricing-tab { color:var(--slate-light); border-bottom:2px solid transparent; }
+  .pricing-tab.active { color:var(--amber-deep) !important; border-bottom-color:var(--amber) !important; }
 </style>
 
 <footer class="footer">
@@ -1206,10 +1207,12 @@ async function updateAuthUI(session) {
     document.getElementById('loginBox').style.display = 'none';
     document.getElementById('userBox').style.display = 'block';
     document.getElementById('userEmail').textContent = session.user.email;
+    document.getElementById('navTryNow').style.display = 'none';
     await refreshQuotaBadge();
   } else {
     document.getElementById('loginBox').style.display = 'block';
     document.getElementById('userBox').style.display = 'none';
+    document.getElementById('navTryNow').style.display = 'inline-block';
   }
 }
 
