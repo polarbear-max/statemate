@@ -1880,19 +1880,19 @@ function renderTransactionTable(allTxs, accountFilter) {
   const filtered = accountFilter === 'all' ? allTxs : allTxs.filter(t => t.sumber_rekening === accountFilter);
   const hasMultiAccount = new Set(allTxs.map(t => t.sumber_rekening).filter(Boolean)).size > 1;
 
-  document.getElementById('txBody').innerHTML = filtered.map((t,i) => `
-    <tr style="${t.is_internal_transfer ? 'opacity:0.6;' : ''}">
+  document.getElementById('txBody').innerHTML = filtered.map((tx,i) => `
+    <tr style="${tx.is_internal_transfer ? 'opacity:0.6;' : ''}">
       <td class="idx">${i+1}</td>
-      <td style="white-space:nowrap">${t.tanggal||'—'}</td>
+      <td style="white-space:nowrap">${tx.tanggal||'—'}</td>
       <td style="max-width:220px;word-break:break-word">
-        ${t.keterangan||'—'}
-        ${t.is_internal_transfer ? `<span class="kat-badge" style="background:var(--cream-deep);color:var(--slate);margin-left:6px;">🔄 ${t('tool.internalTransferBadge')}</span>` : ''}
+        ${tx.keterangan||'—'}
+        ${tx.is_internal_transfer ? `<span class="kat-badge" style="background:var(--cream-deep);color:var(--slate);margin-left:6px;">🔄 ${t('tool.internalTransferBadge')}</span>` : ''}
       </td>
-      <td><span class="kat-badge">${t.kategori||'—'}</span></td>
-      ${hasMultiAccount ? `<td style="font-size:11.5px;color:var(--slate);white-space:nowrap;">${t.sumber_rekening||'—'}</td>` : ''}
-      <td class="num debit">${t.debit ? fmtRp(t.debit) : '—'}</td>
-      <td class="num kredit">${t.kredit ? fmtRp(t.kredit) : '—'}</td>
-      <td class="num">${fmtRp(t.saldo)}</td>
+      <td><span class="kat-badge">${tx.kategori||'—'}</span></td>
+      ${hasMultiAccount ? `<td style="font-size:11.5px;color:var(--slate);white-space:nowrap;">${tx.sumber_rekening||'—'}</td>` : ''}
+      <td class="num debit">${tx.debit ? fmtRp(tx.debit) : '—'}</td>
+      <td class="num kredit">${tx.kredit ? fmtRp(tx.kredit) : '—'}</td>
+      <td class="num">${fmtRp(tx.saldo)}</td>
     </tr>`).join('');
 
   // Tambah/hapus kolom header "Sumber Rekening" sesuai kondisi
@@ -2094,15 +2094,15 @@ function renderLeakTab(txs) {
   // Render transaction table with toggles
   const tbody = document.getElementById('leakBody');
   tbody.innerHTML = txs
-    .filter(t => t.debit) // hanya transaksi pengeluaran yang relevan untuk deteksi ini
-    .map((t, i) => {
-      const tipe = t.tipe_pengeluaran || 'usaha';
+    .filter(tx => tx.debit) // hanya transaksi pengeluaran yang relevan untuk deteksi ini
+    .map((tx, i) => {
+      const tipe = tx.tipe_pengeluaran || 'usaha';
       return `
         <tr data-idx="${i}">
-          <td style="white-space:nowrap">${t.tanggal || '—'}</td>
-          <td style="max-width:240px;word-break:break-word">${t.keterangan || '—'}</td>
-          <td><span class="kat-badge">${t.kategori || '—'}</span></td>
-          <td class="num debit">${fmtRp(t.debit)}</td>
+          <td style="white-space:nowrap">${tx.tanggal || '—'}</td>
+          <td style="max-width:240px;word-break:break-word">${tx.keterangan || '—'}</td>
+          <td><span class="kat-badge">${tx.kategori || '—'}</span></td>
+          <td class="num debit">${fmtRp(tx.debit)}</td>
           <td>
             <div class="leak-toggle" data-tx-idx="${i}">
               <button class="leak-toggle-btn usaha ${tipe === 'usaha' ? 'active usaha' : ''}" data-value="usaha">${t('tool.leakBusiness')}</button>
@@ -2113,7 +2113,7 @@ function renderLeakTab(txs) {
     }).join('');
 
   // Simpan referensi transaksi pengeluaran untuk dipakai ulang saat toggle berubah
-  window._leakExpenseTxs = txs.filter(t => t.debit);
+  window._leakExpenseTxs = txs.filter(tx => tx.debit);
 
   // Attach listener ke semua toggle button
   tbody.querySelectorAll('.leak-toggle-btn').forEach(btn => {
