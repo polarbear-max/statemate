@@ -1268,7 +1268,11 @@ const translations = {
     'tool.leakBusiness': 'Business',
     'tool.leakPersonal': 'Personal',
     'tool.balanceTrend': 'Balance Trend', 'tool.categoryBreakdown': 'Income vs Expense by Category',
-    'tool.thDate': 'Date', 'tool.thDesc': 'Description', 'tool.thCategory': 'Category', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Credit', 'tool.thBalance': 'Balance',
+    'tool.thDate': 'Date', 'tool.thDesc': 'Description', 'tool.thCategory': 'Category', 'tool.thAccount': 'Account', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Credit', 'tool.thBalance': 'Balance',
+    'tool.filterAccount': 'Filter by account',
+    'tool.allAccounts': 'All accounts',
+    'tool.internalTransferNote': 'transactions identified as internal transfers (excluded from totals)',
+    'tool.internalTransferBadge': 'Internal Transfer',
     'tool.exportBtn': 'Download Excel (.xlsx)', 'tool.resetBtn': 'Upload another file',
     'pricing.title': 'Upgrade Statemate', 'pricing.subtitle': 'Your free quota has been used up. Choose a plan to continue.',
     'pricing.tabCredit': 'Buy Credits', 'pricing.tabSub': 'Subscription',
@@ -1373,7 +1377,11 @@ const translations = {
     'tool.leakBusiness': 'Usaha',
     'tool.leakPersonal': 'Pribadi',
     'tool.balanceTrend': 'Trend Saldo', 'tool.categoryBreakdown': 'Pemasukan vs Pengeluaran per Kategori',
-    'tool.thDate': 'Tanggal', 'tool.thDesc': 'Keterangan', 'tool.thCategory': 'Kategori', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Kredit', 'tool.thBalance': 'Saldo',
+    'tool.thDate': 'Tanggal', 'tool.thDesc': 'Keterangan', 'tool.thCategory': 'Kategori', 'tool.thAccount': 'Rekening', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Kredit', 'tool.thBalance': 'Saldo',
+    'tool.filterAccount': 'Filter rekening',
+    'tool.allAccounts': 'Semua rekening',
+    'tool.internalTransferNote': 'transaksi teridentifikasi sebagai transfer internal (dikecualikan dari total)',
+    'tool.internalTransferBadge': 'Transfer Internal',
     'tool.exportBtn': 'Download Excel (.xlsx)', 'tool.resetBtn': 'Upload file lain',
     'pricing.title': 'Upgrade Statemate', 'pricing.subtitle': 'Kuota gratis kamu sudah dipakai. Pilih paket untuk lanjut.',
     'pricing.tabCredit': 'Beli Kredit', 'pricing.tabSub': 'Subscription',
@@ -1754,10 +1762,65 @@ async function handleFiles(files) {
   combined.periode = periods.join(', ');
   // Urutkan transaksi gabungan berdasarkan tanggal
   combined.transaksi.sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+  // Deteksi transfer internal antar rekening sendiri (hanya relevan kalau ada 2+ sumber rekening berbeda)
+  const uniqueAccounts = new Set(combined.transaksi.map(t => t.sumber_rekening));
+  if (uniqueAccounts.size > 1) {
+    detectInternalTransfers(combined.transaksi);
+  }
+
   parsedData = combined;
 
   document.getElementById('stateResult').style.display = 'block';
   renderResult(combined, anyRepaired, failedFiles);
+}
+
+// Cocokkan debit di rekening A dengan kredit di rekening B (jumlah sama, tanggal berdekatan max 2 hari,
+// DAN keterangan mengandung kata kunci transfer) untuk mendeteksi transfer antar rekening sendiri.
+// Syarat kata kunci ditambahkan untuk mengurangi false positive dari kebetulan jumlah & tanggal sama
+// pada transaksi yang sebenarnya tidak terkait (misal bayar supplier vs terima dari customer berbeda).
+function detectInternalTransfers(transactions) {
+  const MAX_DAY_DIFF = 2;
+  const TRANSFER_KEYWORDS = ['transfer', 'tarik', 'pindah', 'kirim', 'rtgs', 'skn', 'antar rekening', 'antarrekening'];
+  const usedIndices = new Set();
+
+  function hasTransferKeyword(text) {
+    const lower = (text || '').toLowerCase();
+    return TRANSFER_KEYWORDS.some(kw => lower.includes(kw));
+  }
+
+  for (let i = 0; i < transactions.length; i++) {
+    if (usedIndices.has(i)) continue;
+    const txA = transactions[i];
+    if (!txA.debit) continue;
+    if (!hasTransferKeyword(txA.keterangan)) continue; // wajib ada kata kunci transfer
+
+    for (let j = 0; j < transactions.length; j++) {
+      if (i === j || usedIndices.has(j)) continue;
+      const txB = transactions[j];
+      if (!txB.kredit) continue;
+      if (!hasTransferKeyword(txB.keterangan)) continue; // wajib ada kata kunci transfer juga
+      if (txA.sumber_rekening === txB.sumber_rekening) continue; // harus beda rekening
+      if (Math.abs(parseFloat(txA.debit) - parseFloat(txB.kredit)) > 1) continue; // toleransi pembulatan kecil
+
+      const dateA = new Date(txA.tanggal);
+      const dateB = new Date(txB.tanggal);
+      const dayDiff = Math.abs((dateA - dateB) / (1000 * 60 * 60 * 24));
+      if (dayDiff > MAX_DAY_DIFF) continue;
+
+      // Match ditemukan — tandai keduanya sebagai transfer internal
+      txA.is_internal_transfer = true;
+      txB.is_internal_transfer = true;
+      usedIndices.add(i);
+      usedIndices.add(j);
+      break;
+    }
+  }
+
+  const count = transactions.filter(t => t.is_internal_transfer).length;
+  if (count > 0) {
+    console.log(`[Statemate] Terdeteksi ${count} transaksi sebagai transfer internal antar rekening (${count / 2} pasangan)`);
+  }
 }
 
 async function processOneFile(file, msgEl) {
@@ -1799,7 +1862,51 @@ async function processOneFile(file, msgEl) {
     throw new Error('Respons server tidak lengkap.');
   }
 
+  // Tag setiap transaksi dengan sumber rekening (bank + 4 digit terakhir no. rekening)
+  // supaya bisa dibedakan saat beberapa file/rekening digabung
+  const accNum = resBody.data.nomor_rekening || '';
+  const accLabel = accNum.length >= 4
+    ? `${resBody.data.bank} •••${accNum.slice(-4)}`
+    : (resBody.data.bank || file.name);
+
+  (resBody.data.transaksi || []).forEach(tx => {
+    tx.sumber_rekening = accLabel;
+  });
+
   return { data: resBody.data, wasRepaired: false };
+}
+
+function renderTransactionTable(allTxs, accountFilter) {
+  const filtered = accountFilter === 'all' ? allTxs : allTxs.filter(t => t.sumber_rekening === accountFilter);
+  const hasMultiAccount = new Set(allTxs.map(t => t.sumber_rekening).filter(Boolean)).size > 1;
+
+  document.getElementById('txBody').innerHTML = filtered.map((t,i) => `
+    <tr style="${t.is_internal_transfer ? 'opacity:0.6;' : ''}">
+      <td class="idx">${i+1}</td>
+      <td style="white-space:nowrap">${t.tanggal||'—'}</td>
+      <td style="max-width:220px;word-break:break-word">
+        ${t.keterangan||'—'}
+        ${t.is_internal_transfer ? `<span class="kat-badge" style="background:var(--cream-deep);color:var(--slate);margin-left:6px;">🔄 ${t('tool.internalTransferBadge')}</span>` : ''}
+      </td>
+      <td><span class="kat-badge">${t.kategori||'—'}</span></td>
+      ${hasMultiAccount ? `<td style="font-size:11.5px;color:var(--slate);white-space:nowrap;">${t.sumber_rekening||'—'}</td>` : ''}
+      <td class="num debit">${t.debit ? fmtRp(t.debit) : '—'}</td>
+      <td class="num kredit">${t.kredit ? fmtRp(t.kredit) : '—'}</td>
+      <td class="num">${fmtRp(t.saldo)}</td>
+    </tr>`).join('');
+
+  // Tambah/hapus kolom header "Sumber Rekening" sesuai kondisi
+  const headerRow = document.querySelector('#tab-transaksi thead tr');
+  const existingAccHeader = document.getElementById('thAccountSource');
+  if (hasMultiAccount && !existingAccHeader) {
+    const th = document.createElement('th');
+    th.id = 'thAccountSource';
+    th.textContent = t('tool.thAccount');
+    const categoryTh = headerRow.children[3]; // setelah kolom Kategori
+    categoryTh.after(th);
+  } else if (!hasMultiAccount && existingAccHeader) {
+    existingAccHeader.remove();
+  }
 }
 
 function renderResult(d, wasRepaired, failedFiles) {
@@ -1832,9 +1939,12 @@ function renderResult(d, wasRepaired, failedFiles) {
   }
 
   const txs = d.transaksi || [];
-  const totalDebit = txs.reduce((s,t) => s + (parseFloat(t.debit)||0), 0);
-  const totalKredit = txs.reduce((s,t) => s + (parseFloat(t.kredit)||0), 0);
+  // Exclude transfer internal dari kalkulasi total — itu bukan income/expense usaha sebenarnya
+  const realTxs = txs.filter(t => !t.is_internal_transfer);
+  const totalDebit = realTxs.reduce((s,t) => s + (parseFloat(t.debit)||0), 0);
+  const totalKredit = realTxs.reduce((s,t) => s + (parseFloat(t.kredit)||0), 0);
   const saldoAkhir = txs.length > 0 ? (parseFloat(txs[txs.length-1].saldo)||0) : 0;
+  const internalTransferCount = txs.filter(t => t.is_internal_transfer).length;
 
   const existingBankBadge = document.getElementById('detectedBankBadge');
   if (existingBankBadge) existingBankBadge.remove();
@@ -1846,6 +1956,29 @@ function renderResult(d, wasRepaired, failedFiles) {
     document.getElementById('metricsRow').before(badge);
   }
 
+  // Filter dropdown rekening - hanya muncul kalau lebih dari 1 sumber rekening
+  const existingAccFilter = document.getElementById('accountFilterWrap');
+  if (existingAccFilter) existingAccFilter.remove();
+  const uniqueAccounts = [...new Set(txs.map(t => t.sumber_rekening).filter(Boolean))];
+  if (uniqueAccounts.length > 1) {
+    const filterWrap = document.createElement('div');
+    filterWrap.id = 'accountFilterWrap';
+    filterWrap.style = 'margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+    filterWrap.innerHTML = `
+      <span style="font-size:12.5px;color:var(--slate);font-weight:600;">${t('tool.filterAccount')}:</span>
+      <select id="accountFilterSelect" class="bank-select" style="margin-bottom:0;width:auto;padding:7px 32px 7px 12px;font-size:12.5px;">
+        <option value="all">${t('tool.allAccounts')}</option>
+        ${uniqueAccounts.map(acc => `<option value="${acc}">${acc}</option>`).join('')}
+      </select>
+      ${internalTransferCount > 0 ? `<span style="font-size:12px;color:var(--slate-light);">🔄 ${internalTransferCount} ${t('tool.internalTransferNote')}</span>` : ''}
+    `;
+    document.getElementById('metricsRow').before(filterWrap);
+
+    document.getElementById('accountFilterSelect').addEventListener('change', (e) => {
+      renderTransactionTable(txs, e.target.value);
+    });
+  }
+
   document.getElementById('metricsRow').innerHTML = [
     { label: 'Total Transaksi', val: txs.length, cls: '' },
     { label: 'Total Keluar', val: fmtRp(totalDebit), cls: 'red' },
@@ -1853,16 +1986,7 @@ function renderResult(d, wasRepaired, failedFiles) {
     { label: 'Saldo Akhir', val: fmtRp(saldoAkhir), cls: '' }
   ].map(m => `<div class="metric ${m.cls}"><div class="mlabel">${m.label}</div><div class="mval">${m.val}</div></div>`).join('');
 
-  document.getElementById('txBody').innerHTML = txs.map((t,i) => `
-    <tr>
-      <td class="idx">${i+1}</td>
-      <td style="white-space:nowrap">${t.tanggal||'—'}</td>
-      <td style="max-width:260px;word-break:break-word">${t.keterangan||'—'}</td>
-      <td><span class="kat-badge">${t.kategori||'—'}</span></td>
-      <td class="num debit">${t.debit ? fmtRp(t.debit) : '—'}</td>
-      <td class="num kredit">${t.kredit ? fmtRp(t.kredit) : '—'}</td>
-      <td class="num">${fmtRp(t.saldo)}</td>
-    </tr>`).join('');
+  renderTransactionTable(txs, 'all');
 
   const byD={}, byK={};
   txs.forEach(tx => {
