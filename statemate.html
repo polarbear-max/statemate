@@ -525,6 +525,33 @@
   .cashflow-wrap { padding: 22px; display: grid; gap: 22px; }
   .cashflow-chart-box { background: white; border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
   .cashflow-chart-title { font-size: 12.5px; font-weight: 600; color: var(--slate); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 14px; }
+
+  /* ===== Leak Detection Tab ===== */
+  .leak-wrap { padding: 22px; }
+  .leak-summary {
+    display: grid; grid-template-columns: 1fr 1.3fr; gap: 18px;
+    background: var(--rose-light); border: 1px solid #e8c6c0; border-radius: 12px;
+    padding: 20px 22px; margin-bottom: 16px;
+  }
+  .leak-summary-label { font-size: 12px; color: var(--rose); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 6px; }
+  .leak-summary-amount { font-family: var(--serif); font-size: 28px; font-weight: 600; color: var(--rose); line-height: 1.1; }
+  .leak-summary-pct { font-size: 12.5px; color: var(--slate); margin-top: 4px; }
+  .leak-summary-top { border-left: 1px solid #e8c6c0; padding-left: 18px; }
+  .leak-top-item { display: flex; justify-content: space-between; font-size: 12.5px; padding: 4px 0; color: var(--slate); }
+  .leak-top-item strong { color: var(--rose); font-weight: 600; }
+  .leak-insight {
+    background: var(--amber-light); border: 1px solid #e0bb94; border-radius: 9px;
+    padding: 12px 16px; font-size: 13px; color: var(--amber-deep); margin-bottom: 14px;
+  }
+  .leak-hint { font-size: 12px; color: var(--slate-light); margin-bottom: 14px; line-height: 1.6; }
+  .leak-toggle { display: inline-flex; border-radius: 99px; background: var(--cream-deep); padding: 2px; gap: 2px; }
+  .leak-toggle-btn {
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 99px; border: none;
+    cursor: pointer; background: transparent; color: var(--slate-light); transition: all 0.12s;
+  }
+  .leak-toggle-btn.active.usaha { background: var(--sage); color: white; }
+  .leak-toggle-btn.active.pribadi { background: var(--rose); color: white; }
+
   .pivot-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   .pivot-section { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
   .pivot-head {
@@ -985,6 +1012,7 @@
           <div class="tabs">
             <div class="tab active" data-tab="transaksi" data-i18n="tool.tabAll">All Transactions</div>
             <div class="tab" data-tab="cashflow" data-i18n="tool.tabCashflow">Cash Flow</div>
+            <div class="tab" data-tab="leak" data-i18n="tool.tabLeak">Personal Spending</div>
             <div class="tab" data-tab="pivot" data-i18n="tool.tabPivot">Pivot & Summary</div>
           </div>
           <div class="tab-content active" id="tab-transaksi">
@@ -1004,6 +1032,26 @@
               <div class="cashflow-chart-box">
                 <div class="cashflow-chart-title" data-i18n="tool.categoryBreakdown">Income vs Expense by Category</div>
                 <canvas id="categoryChart" height="260"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="tab-content" id="tab-leak">
+            <div class="leak-wrap">
+              <div class="leak-summary">
+                <div class="leak-summary-main">
+                  <div class="leak-summary-label" data-i18n="tool.leakTotalLabel">Estimated personal spending</div>
+                  <div class="leak-summary-amount" id="leakTotalAmount">Rp 0</div>
+                  <div class="leak-summary-pct" id="leakTotalPct">0% of total expenses</div>
+                </div>
+                <div class="leak-summary-top" id="leakTopCategories"></div>
+              </div>
+              <div class="leak-insight" id="leakInsight"></div>
+              <div class="leak-hint" data-i18n="tool.leakHint">This is an AI estimate based on transaction descriptions. Use the toggle on each row to correct it — your changes update the totals above instantly.</div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th data-i18n="tool.thDate">Date</th><th data-i18n="tool.thDesc">Description</th><th data-i18n="tool.thCategory">Category</th><th class="num" data-i18n="tool.thDebit">Debit</th><th data-i18n="tool.leakTypeCol">Type</th></tr></thead>
+                  <tbody id="leakBody"></tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1209,7 +1257,16 @@ const translations = {
     'tool.dropTitle': 'Drag & drop your bank statement PDF', 'tool.dropSubtitle': 'or click to choose a file — multiple months at once supported',
     'tool.dropHint': '60+ INDONESIAN BANKS — PDF FORMAT — MAX 20MB',
     'tool.readingPdf': 'Reading PDF...', 'tool.processingSub': 'Usually 10–30 seconds depending on the number of transactions',
-    'tool.tabAll': 'All Transactions', 'tool.tabCashflow': 'Cash Flow', 'tool.tabPivot': 'Pivot & Summary',
+    'tool.tabAll': 'All Transactions', 'tool.tabCashflow': 'Cash Flow', 'tool.tabLeak': 'Personal Spending', 'tool.tabPivot': 'Pivot & Summary',
+    'tool.leakTotalLabel': 'Estimated personal spending',
+    'tool.leakOfTotal': 'of total expenses',
+    'tool.leakNoPersonal': 'No personal spending detected — looks all business!',
+    'tool.leakInsightPrefix': "If separated, you could free up",
+    'tool.leakInsightSuffix': "per month for your business.",
+    'tool.leakHint': "This is an AI estimate based on transaction descriptions. Use the toggle on each row to correct it — your changes update the totals above instantly.",
+    'tool.leakTypeCol': 'Type',
+    'tool.leakBusiness': 'Business',
+    'tool.leakPersonal': 'Personal',
     'tool.balanceTrend': 'Balance Trend', 'tool.categoryBreakdown': 'Income vs Expense by Category',
     'tool.thDate': 'Date', 'tool.thDesc': 'Description', 'tool.thCategory': 'Category', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Credit', 'tool.thBalance': 'Balance',
     'tool.exportBtn': 'Download Excel (.xlsx)', 'tool.resetBtn': 'Upload another file',
@@ -1305,7 +1362,16 @@ const translations = {
     'tool.dropTitle': 'Drag & drop PDF rekening koran', 'tool.dropSubtitle': 'atau klik untuk pilih file — bisa beberapa bulan sekaligus',
     'tool.dropHint': '60+ BANK INDONESIA — FORMAT PDF — MAKS 20MB',
     'tool.readingPdf': 'Membaca PDF...', 'tool.processingSub': 'Biasanya 10–30 detik tergantung jumlah transaksi',
-    'tool.tabAll': 'Semua Transaksi', 'tool.tabCashflow': 'Cash Flow', 'tool.tabPivot': 'Pivot & Ringkasan',
+    'tool.tabAll': 'Semua Transaksi', 'tool.tabCashflow': 'Cash Flow', 'tool.tabLeak': 'Pengeluaran Pribadi', 'tool.tabPivot': 'Pivot & Ringkasan',
+    'tool.leakTotalLabel': 'Estimasi pengeluaran pribadi',
+    'tool.leakOfTotal': 'dari total pengeluaran',
+    'tool.leakNoPersonal': 'Tidak ada pengeluaran pribadi terdeteksi — semua untuk usaha!',
+    'tool.leakInsightPrefix': 'Kalau dipisah, kamu bisa hemat',
+    'tool.leakInsightSuffix': 'per bulan untuk usaha kamu.',
+    'tool.leakHint': 'Ini estimasi AI berdasarkan keterangan transaksi. Pakai toggle di tiap baris untuk koreksi — perubahan kamu langsung update total di atas.',
+    'tool.leakTypeCol': 'Tipe',
+    'tool.leakBusiness': 'Usaha',
+    'tool.leakPersonal': 'Pribadi',
     'tool.balanceTrend': 'Trend Saldo', 'tool.categoryBreakdown': 'Pemasukan vs Pengeluaran per Kategori',
     'tool.thDate': 'Tanggal', 'tool.thDesc': 'Keterangan', 'tool.thCategory': 'Kategori', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Kredit', 'tool.thBalance': 'Saldo',
     'tool.exportBtn': 'Download Excel (.xlsx)', 'tool.resetBtn': 'Upload file lain',
@@ -1828,6 +1894,7 @@ function renderResult(d, wasRepaired, failedFiles) {
     pivot(byK, kC, 'inc', '💰 ' + t('js.incomeByCategory'));
 
   renderCashflowCharts(txs, byD, byK, dC, kC);
+  renderLeakTab(txs);
 }
 
 let balanceChartInstance = null;
@@ -1896,6 +1963,88 @@ function renderCashflowCharts(txs, byD, byK, dC, kC) {
       }
     }
   });
+}
+
+// ===== Leak Detection (Personal vs Business Spending) =====
+function renderLeakTab(txs) {
+  // Render transaction table with toggles
+  const tbody = document.getElementById('leakBody');
+  tbody.innerHTML = txs
+    .filter(t => t.debit) // hanya transaksi pengeluaran yang relevan untuk deteksi ini
+    .map((t, i) => {
+      const tipe = t.tipe_pengeluaran || 'usaha';
+      return `
+        <tr data-idx="${i}">
+          <td style="white-space:nowrap">${t.tanggal || '—'}</td>
+          <td style="max-width:240px;word-break:break-word">${t.keterangan || '—'}</td>
+          <td><span class="kat-badge">${t.kategori || '—'}</span></td>
+          <td class="num debit">${fmtRp(t.debit)}</td>
+          <td>
+            <div class="leak-toggle" data-tx-idx="${i}">
+              <button class="leak-toggle-btn usaha ${tipe === 'usaha' ? 'active usaha' : ''}" data-value="usaha">${t('tool.leakBusiness')}</button>
+              <button class="leak-toggle-btn pribadi ${tipe === 'pribadi' ? 'active pribadi' : ''}" data-value="pribadi">${t('tool.leakPersonal')}</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+
+  // Simpan referensi transaksi pengeluaran untuk dipakai ulang saat toggle berubah
+  window._leakExpenseTxs = txs.filter(t => t.debit);
+
+  // Attach listener ke semua toggle button
+  tbody.querySelectorAll('.leak-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.closest('.leak-toggle').dataset.txIdx, 10);
+      const value = btn.dataset.value;
+      window._leakExpenseTxs[idx].tipe_pengeluaran = value;
+
+      // Update visual toggle
+      const toggleGroup = btn.closest('.leak-toggle');
+      toggleGroup.querySelectorAll('.leak-toggle-btn').forEach(b => b.classList.remove('active', 'usaha', 'pribadi'));
+      btn.classList.add('active', value);
+
+      recalculateLeakSummary();
+    });
+  });
+
+  recalculateLeakSummary();
+}
+
+function recalculateLeakSummary() {
+  const expenseTxs = window._leakExpenseTxs || [];
+  const totalExpense = expenseTxs.reduce((s, t) => s + (parseFloat(t.debit) || 0), 0);
+  const personalTxs = expenseTxs.filter(t => t.tipe_pengeluaran === 'pribadi');
+  const personalTotal = personalTxs.reduce((s, t) => s + (parseFloat(t.debit) || 0), 0);
+  const pct = totalExpense > 0 ? Math.round((personalTotal / totalExpense) * 100) : 0;
+
+  document.getElementById('leakTotalAmount').textContent = fmtRp(personalTotal);
+  document.getElementById('leakTotalPct').textContent = `${pct}% ${t('tool.leakOfTotal')}`;
+
+  // Top 3 kategori personal terbesar
+  const byCategory = {};
+  personalTxs.forEach(t => {
+    const k = t.kategori || t('js.otherCategory');
+    byCategory[k] = (byCategory[k] || 0) + (parseFloat(t.debit) || 0);
+  });
+  const topCats = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+  const topCatsEl = document.getElementById('leakTopCategories');
+  if (topCats.length) {
+    topCatsEl.innerHTML = topCats.map(([k, v]) =>
+      `<div class="leak-top-item"><span>${k}</span><strong>${fmtRp(v)}</strong></div>`
+    ).join('');
+  } else {
+    topCatsEl.innerHTML = `<div class="leak-top-item" style="color:var(--slate-light)">${t('tool.leakNoPersonal')}</div>`;
+  }
+
+  // Insight message
+  const insightEl = document.getElementById('leakInsight');
+  if (personalTotal > 0) {
+    insightEl.style.display = 'flex';
+    insightEl.innerHTML = `💡 ${t('tool.leakInsightPrefix')} <strong>${fmtRp(personalTotal)}</strong> ${t('tool.leakInsightSuffix')}`;
+  } else {
+    insightEl.style.display = 'none';
+  }
 }
 
 function fmtRpShort(n) {
