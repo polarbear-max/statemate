@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -313,6 +314,74 @@
   .step h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
   .step p { font-size: 13.5px; color: var(--slate); }
 
+  /* ===== Tax Calculator ===== */
+  .tax-calc-shell {
+    background: white; border: 1px solid var(--line); border-radius: 16px;
+    overflow: hidden; box-shadow: 0 20px 50px -25px rgba(15,23,41,0.12);
+  }
+  .tax-calc-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .tax-calc-input-col { padding: 32px; border-right: 1px solid var(--line); }
+  .tax-calc-result-col {
+    padding: 32px; background: var(--cream);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tax-input-row {
+    display: flex; align-items: center; border: 1.5px solid var(--line);
+    border-radius: 9px; overflow: hidden; background: var(--cream);
+  }
+  .tax-input-prefix {
+    padding: 11px 12px; font-family: var(--mono); font-size: 14px;
+    color: var(--slate); background: var(--cream-deep); font-weight: 600;
+  }
+  .tax-input {
+    flex: 1; border: none; padding: 11px 12px; font-size: 15px;
+    font-family: var(--mono); background: transparent; outline: none; color: var(--navy);
+  }
+  .tax-input-row:focus-within { border-color: var(--amber); }
+  .tax-disclaimer { font-size: 11.5px; color: var(--slate-light); margin-top: 14px; line-height: 1.6; }
+
+  .tax-period-toggle { display: flex; gap: 8px; }
+  .tax-radio-option {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 9px;
+    cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--slate);
+    transition: all 0.12s; background: var(--cream);
+  }
+  .tax-radio-option input[type="radio"] { accent-color: var(--amber); margin: 0; }
+  .tax-radio-option:has(input:checked) {
+    border-color: var(--amber); background: var(--amber-light); color: var(--amber-deep); font-weight: 600;
+  }
+  .tax-month-count-wrap { margin-top: 10px; overflow: hidden; max-height: 50px; transition: max-height 0.2s ease, opacity 0.2s ease, margin-top 0.2s ease; opacity: 1; }
+  .tax-month-count-wrap.hidden { max-height: 0; opacity: 0; margin-top: 0; }
+  .tax-input-suffix { padding: 0 12px; font-size: 13px; color: var(--slate); white-space: nowrap; }
+
+  .tax-result-placeholder {
+    text-align: center; color: var(--slate-light);
+  }
+  .tax-result-placeholder svg { stroke: var(--slate-light); fill: none; stroke-width: 1.5; margin: 0 auto 12px; opacity: 0.5; }
+  .tax-result-placeholder p { font-size: 13px; }
+
+  .tax-result-content { width: 100%; }
+  .tax-result-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 13px; color: var(--slate); margin-bottom: 10px;
+  }
+  .tax-result-row strong { font-family: var(--serif); font-size: 17px; color: var(--navy); font-weight: 600; }
+  .tax-result-row.highlight strong { color: var(--amber-deep); font-size: 22px; }
+  .tax-result-divider { height: 1px; background: var(--line); margin: 14px 0; }
+  .tax-result-status {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+    padding: 5px 12px; border-radius: 99px; margin-bottom: 6px;
+  }
+  .tax-result-status.free { background: var(--sage-light); color: var(--sage); }
+  .tax-result-status.taxed { background: var(--amber-light); color: var(--amber-deep); }
+  .tax-result-note { font-size: 11.5px; color: var(--slate-light); margin-top: 12px; line-height: 1.6; }
+
+  @media (max-width: 720px) {
+    .tax-calc-grid { grid-template-columns: 1fr; }
+    .tax-calc-input-col { border-right: none; border-bottom: 1px solid var(--line); }
+  }
+
   /* ===== Tool section ===== */
   .tool-section { background: var(--cream-deep); }
   .tool-shell {
@@ -453,6 +522,9 @@
   .kat-badge { font-size: 11px; padding: 3px 10px; border-radius: 99px; background: var(--cream-deep); color: var(--slate); border: 1px solid var(--line); white-space: nowrap; }
 
   .pivot-wrap { padding: 22px; }
+  .cashflow-wrap { padding: 22px; display: grid; gap: 22px; }
+  .cashflow-chart-box { background: white; border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .cashflow-chart-title { font-size: 12.5px; font-weight: 600; color: var(--slate); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 14px; }
   .pivot-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   .pivot-section { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
   .pivot-head {
@@ -689,6 +761,78 @@
 
 <div class="perf-divider"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
 
+<!-- ===== TAX CALCULATOR ===== -->
+<section class="section">
+  <div class="section-head">
+    <div class="section-eyebrow" data-i18n="tax.eyebrow">Free Tool</div>
+    <h2 data-i18n="tax.title">UMKM Final Tax (PPh) Calculator</h2>
+    <p data-i18n="tax.subtitle">Estimate your final income tax (0.5%) based on Indonesia's latest UMKM tax regulation (PP 20/2026). No upload needed, completely free.</p>
+  </div>
+
+  <div class="tax-calc-shell">
+    <div class="tax-calc-grid">
+      <div class="tax-calc-input-col">
+        <div class="field-label" data-i18n="tax.revenueLabel">Your business revenue so far</div>
+        <div class="tax-input-row">
+          <span class="tax-input-prefix">Rp</span>
+          <input type="text" id="taxRevenueInput" class="tax-input" placeholder="150.000.000" inputmode="numeric">
+        </div>
+
+        <div class="field-label" style="margin-top:18px;" data-i18n="tax.periodLabel">Period this revenue covers</div>
+        <div class="tax-period-toggle">
+          <label class="tax-radio-option">
+            <input type="radio" name="taxPeriodType" value="monthly" checked>
+            <span data-i18n="tax.periodMonthly">Monthly</span>
+          </label>
+          <label class="tax-radio-option">
+            <input type="radio" name="taxPeriodType" value="yearly">
+            <span data-i18n="tax.periodYearly">Yearly</span>
+          </label>
+        </div>
+
+        <div id="taxMonthCountWrap" class="tax-month-count-wrap">
+          <div class="tax-input-row" style="max-width:160px;">
+            <input type="number" id="taxMonthCount" class="tax-input" value="1" min="1" max="11" style="text-align:center;">
+            <span class="tax-input-suffix" data-i18n="tax.monthsSuffix">month(s)</span>
+          </div>
+        </div>
+
+        <button id="btnCalcTax" class="btn-tool btn-tool-primary" style="margin-top:18px;width:100%;justify-content:center;">
+          <span data-i18n="tax.calcBtn">Calculate Tax Estimate</span>
+        </button>
+
+        <p class="tax-disclaimer" data-i18n="tax.disclaimer">This is an estimate based on PP 20/2026 for individual taxpayers (Wajib Pajak Orang Pribadi). Not a substitute for professional tax advice.</p>
+      </div>
+
+      <div class="tax-calc-result-col" id="taxResultBox">
+        <div class="tax-result-placeholder" id="taxPlaceholder">
+          <svg viewBox="0 0 24 24" width="36" height="36"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <p data-i18n="tax.placeholder">Your tax estimate will appear here</p>
+        </div>
+        <div class="tax-result-content" id="taxResultContent" style="display:none;">
+          <div class="tax-result-row">
+            <span data-i18n="tax.annualProjection">Projected annual revenue</span>
+            <strong id="taxAnnualRevenue">Rp 0</strong>
+          </div>
+          <div class="tax-result-status" id="taxStatusBadge"></div>
+          <div class="tax-result-divider"></div>
+          <div class="tax-result-row highlight">
+            <span data-i18n="tax.totalTax">Estimated annual tax (PPh)</span>
+            <strong id="taxAnnualAmount">Rp 0</strong>
+          </div>
+          <div class="tax-result-row">
+            <span data-i18n="tax.monthlyTax">≈ Set aside per month</span>
+            <strong id="taxMonthlyAmount">Rp 0</strong>
+          </div>
+          <div class="tax-result-note" id="taxResultNote"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="perf-divider"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
 <!-- ===== TOOL ===== -->
 <section class="section tool-section" id="tool">
   <div class="section-head">
@@ -840,6 +984,7 @@
         <div class="result-card">
           <div class="tabs">
             <div class="tab active" data-tab="transaksi" data-i18n="tool.tabAll">All Transactions</div>
+            <div class="tab" data-tab="cashflow" data-i18n="tool.tabCashflow">Cash Flow</div>
             <div class="tab" data-tab="pivot" data-i18n="tool.tabPivot">Pivot & Summary</div>
           </div>
           <div class="tab-content active" id="tab-transaksi">
@@ -848,6 +993,18 @@
                 <thead><tr><th>#</th><th data-i18n="tool.thDate">Date</th><th data-i18n="tool.thDesc">Description</th><th data-i18n="tool.thCategory">Category</th><th class="num" data-i18n="tool.thDebit">Debit</th><th class="num" data-i18n="tool.thCredit">Credit</th><th class="num" data-i18n="tool.thBalance">Balance</th></tr></thead>
                 <tbody id="txBody"></tbody>
               </table>
+            </div>
+          </div>
+          <div class="tab-content" id="tab-cashflow">
+            <div class="cashflow-wrap">
+              <div class="cashflow-chart-box">
+                <div class="cashflow-chart-title" data-i18n="tool.balanceTrend">Balance Trend</div>
+                <canvas id="balanceChart" height="220"></canvas>
+              </div>
+              <div class="cashflow-chart-box">
+                <div class="cashflow-chart-title" data-i18n="tool.categoryBreakdown">Income vs Expense by Category</div>
+                <canvas id="categoryChart" height="260"></canvas>
+              </div>
             </div>
           </div>
           <div class="tab-content" id="tab-pivot">
@@ -1025,6 +1182,23 @@ const translations = {
     'how.s1Title': 'Sign in with Google', 'how.s1Desc': 'Log in once with your Google account. No API key, no credit card — your first 10 documents are free.',
     'how.s2Title': 'Upload your bank statement', 'how.s2Desc': 'Drag & drop or choose a file. Statemate instantly recognizes the bank and format you uploaded.',
     'how.s3Title': 'Download a clean Excel file', 'how.s3Desc': 'Full transactions plus category pivots, ready to attach to a report or analyze further.',
+    'tax.eyebrow': 'Free Tool',
+    'tax.title': 'UMKM Final Tax (PPh) Calculator',
+    'tax.subtitle': "Estimate your final income tax (0.5%) based on Indonesia's latest UMKM tax regulation (PP 20/2026). No upload needed, completely free.",
+    'tax.revenueLabel': 'Your business revenue so far',
+    'tax.periodLabel': 'Period this revenue covers',
+    'tax.periodMonthly': 'Monthly', 'tax.periodYearly': 'Yearly', 'tax.monthsSuffix': 'month(s)',
+    'tax.calcBtn': 'Calculate Tax Estimate',
+    'tax.disclaimer': 'This is an estimate based on PP 20/2026 for individual taxpayers (Wajib Pajak Orang Pribadi). Not a substitute for professional tax advice.',
+    'tax.placeholder': 'Your tax estimate will appear here',
+    'tax.annualProjection': 'Projected annual revenue',
+    'tax.totalTax': 'Estimated annual tax (PPh)',
+    'tax.monthlyTax': '≈ Set aside per month',
+    'tax.statusFree': 'Tax-free (under Rp 500M/year)',
+    'tax.statusTaxed': 'Subject to 0.5% final tax',
+    'tax.noteFree': "Your projected annual revenue is under Rp 500 million, so you're exempt from PPh Final UMKM under PP 20/2026. No tax payment needed for this revenue.",
+    'tax.noteTaxed': 'Tax is calculated as 0.5% of the amount exceeding Rp 500 million per year. This applies to individual taxpayers (Wajib Pajak Orang Pribadi), PT Perorangan, and cooperatives.',
+    'tax.errorEmpty': 'Please enter your revenue amount.',
     'tool.eyebrow': 'Try It Now', 'tool.title': 'Upload your bank statement.',
     'tool.subtitle': 'Your file is processed securely — Statemate never stores your bank statement data.',
     'tool.headerTitle': 'Bank Statement Converter', 'tool.headerBadge': '● Ready to use',
@@ -1035,7 +1209,8 @@ const translations = {
     'tool.dropTitle': 'Drag & drop your bank statement PDF', 'tool.dropSubtitle': 'or click to choose a file — multiple months at once supported',
     'tool.dropHint': '60+ INDONESIAN BANKS — PDF FORMAT — MAX 20MB',
     'tool.readingPdf': 'Reading PDF...', 'tool.processingSub': 'Usually 10–30 seconds depending on the number of transactions',
-    'tool.tabAll': 'All Transactions', 'tool.tabPivot': 'Pivot & Summary',
+    'tool.tabAll': 'All Transactions', 'tool.tabCashflow': 'Cash Flow', 'tool.tabPivot': 'Pivot & Summary',
+    'tool.balanceTrend': 'Balance Trend', 'tool.categoryBreakdown': 'Income vs Expense by Category',
     'tool.thDate': 'Date', 'tool.thDesc': 'Description', 'tool.thCategory': 'Category', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Credit', 'tool.thBalance': 'Balance',
     'tool.exportBtn': 'Download Excel (.xlsx)', 'tool.resetBtn': 'Upload another file',
     'pricing.title': 'Upgrade Statemate', 'pricing.subtitle': 'Your free quota has been used up. Choose a plan to continue.',
@@ -1103,6 +1278,23 @@ const translations = {
     'how.s1Title': 'Masuk dengan Google', 'how.s1Desc': 'Login sekali pakai akun Google kamu. Tidak perlu API key, tidak perlu kartu kredit — 10 dokumen pertama gratis.',
     'how.s2Title': 'Upload PDF rekening koran', 'how.s2Desc': 'Drag & drop atau pilih file. Statemate langsung mengenali bank dan format yang kamu unggah.',
     'how.s3Title': 'Unduh Excel yang rapi', 'how.s3Desc': 'Transaksi lengkap plus pivot per kategori, siap dilampirkan ke laporan atau dianalisis lebih lanjut.',
+    'tax.eyebrow': 'Tool Gratis',
+    'tax.title': 'Kalkulator PPh Final UMKM',
+    'tax.subtitle': 'Estimasi pajak penghasilan final (0,5%) berdasarkan aturan pajak UMKM terbaru di Indonesia (PP 20/2026). Tidak perlu upload, sepenuhnya gratis.',
+    'tax.revenueLabel': 'Omzet usaha kamu sejauh ini',
+    'tax.periodLabel': 'Periode omzet ini',
+    'tax.periodMonthly': 'Bulanan', 'tax.periodYearly': 'Tahunan', 'tax.monthsSuffix': 'bulan',
+    'tax.calcBtn': 'Hitung Estimasi Pajak',
+    'tax.disclaimer': 'Ini adalah estimasi berdasarkan PP 20/2026 untuk Wajib Pajak Orang Pribadi. Bukan pengganti konsultasi pajak profesional.',
+    'tax.placeholder': 'Estimasi pajak kamu akan muncul di sini',
+    'tax.annualProjection': 'Proyeksi omzet tahunan',
+    'tax.totalTax': 'Estimasi pajak setahun (PPh)',
+    'tax.monthlyTax': '≈ Sisihkan per bulan',
+    'tax.statusFree': 'Bebas pajak (di bawah Rp 500jt/tahun)',
+    'tax.statusTaxed': 'Kena pajak final 0,5%',
+    'tax.noteFree': 'Proyeksi omzet tahunan kamu di bawah Rp 500 juta, jadi kamu bebas dari PPh Final UMKM sesuai PP 20/2026. Tidak ada pajak yang perlu dibayar untuk omzet ini.',
+    'tax.noteTaxed': 'Pajak dihitung 0,5% dari bagian omzet yang melebihi Rp 500 juta per tahun. Berlaku untuk Wajib Pajak Orang Pribadi, PT Perorangan, dan koperasi.',
+    'tax.errorEmpty': 'Silakan masukkan jumlah omzet kamu.',
     'tool.eyebrow': 'Coba Sekarang', 'tool.title': 'Upload rekening koran kamu.',
     'tool.subtitle': 'File kamu diproses dengan aman — Statemate tidak pernah menyimpan data rekening koran kamu.',
     'tool.headerTitle': 'Konverter Rekening Koran', 'tool.headerBadge': '● Siap dipakai',
@@ -1113,7 +1305,8 @@ const translations = {
     'tool.dropTitle': 'Drag & drop PDF rekening koran', 'tool.dropSubtitle': 'atau klik untuk pilih file — bisa beberapa bulan sekaligus',
     'tool.dropHint': '60+ BANK INDONESIA — FORMAT PDF — MAKS 20MB',
     'tool.readingPdf': 'Membaca PDF...', 'tool.processingSub': 'Biasanya 10–30 detik tergantung jumlah transaksi',
-    'tool.tabAll': 'Semua Transaksi', 'tool.tabPivot': 'Pivot & Ringkasan',
+    'tool.tabAll': 'Semua Transaksi', 'tool.tabCashflow': 'Cash Flow', 'tool.tabPivot': 'Pivot & Ringkasan',
+    'tool.balanceTrend': 'Trend Saldo', 'tool.categoryBreakdown': 'Pemasukan vs Pengeluaran per Kategori',
     'tool.thDate': 'Tanggal', 'tool.thDesc': 'Keterangan', 'tool.thCategory': 'Kategori', 'tool.thDebit': 'Debit', 'tool.thCredit': 'Kredit', 'tool.thBalance': 'Saldo',
     'tool.exportBtn': 'Download Excel (.xlsx)', 'tool.resetBtn': 'Upload file lain',
     'pricing.title': 'Upgrade Statemate', 'pricing.subtitle': 'Kuota gratis kamu sudah dipakai. Pilih paket untuk lanjut.',
@@ -1183,6 +1376,84 @@ document.addEventListener('DOMContentLoaded', () => {
 
 document.getElementById('langToggle').addEventListener('click', () => {
   setLanguage(currentLang === 'en' ? 'id' : 'en');
+});
+
+// ===== Tax Calculator (PPh Final UMKM, PP 20/2026) =====
+const TAX_FREE_THRESHOLD = 500000000; // Rp 500 juta bebas pajak per tahun
+const TAX_RATE = 0.005; // 0.5%
+
+function formatRupiahInput(value) {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return '';
+  return Number(digits).toLocaleString('id-ID');
+}
+
+const taxRevenueInput = document.getElementById('taxRevenueInput');
+taxRevenueInput.addEventListener('input', (e) => {
+  const cursorFromEnd = e.target.value.length - e.target.selectionStart;
+  e.target.value = formatRupiahInput(e.target.value);
+  const newPos = e.target.value.length - cursorFromEnd;
+  e.target.setSelectionRange(newPos, newPos);
+});
+
+document.querySelectorAll('input[name="taxPeriodType"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    const wrap = document.getElementById('taxMonthCountWrap');
+    if (e.target.value === 'yearly') {
+      wrap.classList.add('hidden');
+    } else {
+      wrap.classList.remove('hidden');
+    }
+  });
+});
+
+function calculateTax() {
+  const rawValue = taxRevenueInput.value.replace(/\D/g, '');
+  const revenue = parseFloat(rawValue) || 0;
+  const periodType = document.querySelector('input[name="taxPeriodType"]:checked').value;
+  const periodMonths = periodType === 'yearly' ? 12 : Math.max(1, Math.min(11, parseInt(document.getElementById('taxMonthCount').value, 10) || 1));
+
+  if (revenue <= 0) {
+    showError(t('tax.errorEmpty') || 'Please enter your revenue amount.');
+    return;
+  }
+
+  const annualProjection = (revenue / periodMonths) * 12;
+  const isFree = annualProjection <= TAX_FREE_THRESHOLD;
+  const taxableAmount = isFree ? 0 : (annualProjection - TAX_FREE_THRESHOLD);
+  const annualTax = taxableAmount * TAX_RATE;
+  const monthlyTax = annualTax / 12;
+
+  document.getElementById('taxPlaceholder').style.display = 'none';
+  document.getElementById('taxResultContent').style.display = 'block';
+
+  document.getElementById('taxAnnualRevenue').textContent = 'Rp ' + Math.round(annualProjection).toLocaleString('id-ID');
+
+  const statusBadge = document.getElementById('taxStatusBadge');
+  if (isFree) {
+    statusBadge.className = 'tax-result-status free';
+    statusBadge.innerHTML = '✅ ' + t('tax.statusFree');
+  } else {
+    statusBadge.className = 'tax-result-status taxed';
+    statusBadge.innerHTML = '📊 ' + t('tax.statusTaxed');
+  }
+
+  document.getElementById('taxAnnualAmount').textContent = 'Rp ' + Math.round(annualTax).toLocaleString('id-ID');
+  document.getElementById('taxMonthlyAmount').textContent = 'Rp ' + Math.round(monthlyTax).toLocaleString('id-ID');
+
+  const noteEl = document.getElementById('taxResultNote');
+  if (isFree) {
+    noteEl.textContent = t('tax.noteFree');
+  } else {
+    noteEl.textContent = t('tax.noteTaxed');
+  }
+
+  console.log(`[Statemate Tax Calc] Revenue input: Rp${revenue.toLocaleString('id-ID')} over ${periodMonths}mo -> Annual: Rp${Math.round(annualProjection).toLocaleString('id-ID')} -> Tax: Rp${Math.round(annualTax).toLocaleString('id-ID')}/yr`);
+}
+
+document.getElementById('btnCalcTax').addEventListener('click', calculateTax);
+taxRevenueInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') calculateTax();
 });
 
 // ===== Supabase Setup =====
@@ -1528,10 +1799,10 @@ function renderResult(d, wasRepaired, failedFiles) {
     </tr>`).join('');
 
   const byD={}, byK={};
-  txs.forEach(t => {
-    const k = t.kategori||t('js.otherCategory');
-    if (t.debit) byD[k] = (byD[k]||0) + parseFloat(t.debit);
-    if (t.kredit) byK[k] = (byK[k]||0) + parseFloat(t.kredit);
+  txs.forEach(tx => {
+    const k = tx.kategori || t('js.otherCategory');
+    if (tx.debit) byD[k] = (byD[k]||0) + parseFloat(tx.debit);
+    if (tx.kredit) byK[k] = (byK[k]||0) + parseFloat(tx.kredit);
   });
 
   const dC = ['#A23E3E','#C2682E','#9C4F1F','#B5552E','#7D3C98','#34495E','#16A085','#7F8C8D','#E91E63','#A04000','#9B59B6','#F39C12','#1ABC9C','#C0392B','#E67E22','#D35400'];
@@ -1555,6 +1826,84 @@ function renderResult(d, wasRepaired, failedFiles) {
   document.getElementById('pivotGrid').innerHTML =
     pivot(byD, dC, 'out', '💸 ' + t('js.expenseByCategory')) +
     pivot(byK, kC, 'inc', '💰 ' + t('js.incomeByCategory'));
+
+  renderCashflowCharts(txs, byD, byK, dC, kC);
+}
+
+let balanceChartInstance = null;
+let categoryChartInstance = null;
+
+function renderCashflowCharts(txs, byD, byK, dC, kC) {
+  // Urutkan transaksi by tanggal untuk trend saldo yang akurat
+  const sorted = [...txs].sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+  const labels = sorted.map(tx => tx.tanggal);
+  const balances = sorted.map(tx => parseFloat(tx.saldo) || 0);
+
+  const balanceCtx = document.getElementById('balanceChart');
+  if (balanceChartInstance) balanceChartInstance.destroy();
+  balanceChartInstance = new Chart(balanceCtx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: t('tool.thBalance'),
+        data: balances,
+        borderColor: '#C2682E',
+        backgroundColor: 'rgba(194,104,46,0.08)',
+        fill: true,
+        tension: 0.25,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { callback: (v) => fmtRpShort(v) } },
+        x: { ticks: { maxTicksLimit: 8, maxRotation: 0 } }
+      }
+    }
+  });
+
+  // Gabungkan kategori expense + income jadi satu chart batang horizontal
+  const allCats = [
+    ...Object.entries(byD).map(([k, v]) => ({ k, v, type: 'out' })),
+    ...Object.entries(byK).map(([k, v]) => ({ k, v, type: 'in' }))
+  ].sort((a, b) => b.v - a.v).slice(0, 10);
+
+  const categoryCtx = document.getElementById('categoryChart');
+  if (categoryChartInstance) categoryChartInstance.destroy();
+  categoryChartInstance = new Chart(categoryCtx, {
+    type: 'bar',
+    data: {
+      labels: allCats.map(c => c.k),
+      datasets: [{
+        data: allCats.map(c => c.v),
+        backgroundColor: allCats.map(c => c.type === 'out' ? '#C2682E' : '#3D7A5C'),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { callback: (v) => fmtRpShort(v) } }
+      }
+    }
+  });
+}
+
+function fmtRpShort(n) {
+  const abs = Math.abs(n);
+  if (abs >= 1000000000) return (n/1000000000).toFixed(1) + 'M';
+  if (abs >= 1000000) return (n/1000000).toFixed(1) + 'jt';
+  if (abs >= 1000) return (n/1000).toFixed(0) + 'rb';
+  return n.toString();
 }
 
 document.querySelectorAll('.tab').forEach(t => {
