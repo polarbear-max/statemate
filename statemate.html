@@ -681,6 +681,46 @@
     /* Account filter */
     #accountFilterWrap { flex-direction: column; align-items: flex-start; gap: 8px; }
   }
+
+  /* ===== Mobile Landscape: device rotated sideways gets more horizontal room,
+     so we restore richer multi-column layouts instead of forcing everything
+     into a single narrow column ===== */
+  @media (max-width: 900px) and (orientation: landscape) {
+    .hero { grid-template-columns: 1.1fr 1fr; padding-top: 30px; gap: 24px; }
+    .hero h1 { font-size: 24px; }
+    .hero .sub { font-size: 13px; }
+    .hero-ctas { flex-direction: row; }
+    .stats-inner { grid-template-columns: repeat(4, 1fr); }
+    .feature-grid { grid-template-columns: repeat(2, 1fr); }
+    .cat-grid { grid-template-columns: repeat(2, 1fr); }
+    .steps { grid-template-columns: repeat(3, 1fr); }
+    .metrics { grid-template-columns: repeat(4, 1fr); }
+    .pivot-2col { grid-template-columns: repeat(2, 1fr); }
+
+    .cashflow-wrap { grid-template-columns: repeat(2, 1fr); }
+    .cashflow-chart-box { height: 230px; }
+    .cashflow-chart-box canvas { max-height: 170px !important; }
+
+    .leak-summary { grid-template-columns: 1fr 1fr; }
+    .leak-summary-top { border-left: 1px solid #e8c6c0; border-top: none; padding-left: 18px; padding-top: 0; }
+
+    .tax-calc-grid { grid-template-columns: 1fr 1fr; }
+
+    .pricing-card { flex-direction: row; align-items: center; }
+    .pricing-card > div:last-child { width: auto; }
+
+    /* Table gets more breathing room sideways, no need to shrink font as much */
+    table { font-size: 12.5px; }
+    thead th { font-size: 10.5px; }
+  }
+
+  /* Very short landscape (phone rotated, browser chrome visible) needs tighter vertical rhythm */
+  @media (max-height: 420px) and (orientation: landscape) {
+    .nav-inner { padding: 8px 16px; }
+    .hero { padding: 16px 16px 16px; }
+    .section { padding: 24px 16px; }
+    .tool-body { padding: 14px; }
+  }
 </style>
 </head>
 <body>
@@ -2099,6 +2139,16 @@ function renderResult(d, wasRepaired, failedFiles) {
 
 let balanceChartInstance = null;
 let categoryChartInstance = null;
+
+// Saat device dirotasi, paksa Chart.js resize ulang secara eksplisit
+// supaya canvas tidak "tersangkut" di ukuran lama / berperilaku aneh
+// setelah perubahan dimensi container yang mendadak.
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    if (balanceChartInstance) balanceChartInstance.resize();
+    if (categoryChartInstance) categoryChartInstance.resize();
+  }, 200); // beri waktu browser selesai layout ulang dulu
+});
 
 function renderCashflowCharts(txs, byD, byK, dC, kC) {
   // Urutkan transaksi by tanggal untuk trend saldo yang akurat
