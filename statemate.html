@@ -2135,6 +2135,14 @@ function renderResult(d, wasRepaired, failedFiles) {
 
   renderCashflowCharts(txs, byD, byK, dC, kC);
   renderLeakTab(txs);
+
+  // Chart.js sering salah ukur dimensi saat tab "Cash Flow" belum aktif (display:none)
+  // di momen render awal ini. Paksa resize lagi setelah browser selesai layout,
+  // untuk memastikan chart sudah pas dengan ukuran asli container-nya.
+  setTimeout(() => {
+    if (balanceChartInstance) balanceChartInstance.resize();
+    if (categoryChartInstance) categoryChartInstance.resize();
+  }, 100);
 }
 
 let balanceChartInstance = null;
@@ -2272,9 +2280,9 @@ function recalculateLeakSummary() {
 
   // Top 3 kategori personal terbesar
   const byCategory = {};
-  personalTxs.forEach(t => {
-    const k = t.kategori || t('js.otherCategory');
-    byCategory[k] = (byCategory[k] || 0) + (parseFloat(t.debit) || 0);
+  personalTxs.forEach(tx => {
+    const k = tx.kategori || t('js.otherCategory');
+    byCategory[k] = (byCategory[k] || 0) + (parseFloat(tx.debit) || 0);
   });
   const topCats = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
@@ -2305,12 +2313,22 @@ function fmtRpShort(n) {
   return n.toString();
 }
 
-document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => {
+document.querySelectorAll('.tab').forEach(tabEl => {
+  tabEl.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+    tabEl.classList.add('active');
+    document.getElementById('tab-'+tabEl.dataset.tab).classList.add('active');
+
+    // Chart.js salah ukur dimensi kalau di-render saat container masih display:none.
+    // Paksa resize setiap kali tab Cash Flow diaktifkan supaya chart selalu pas
+    // dengan ukuran container yang sebenarnya terlihat saat itu.
+    if (tabEl.dataset.tab === 'cashflow') {
+      setTimeout(() => {
+        if (balanceChartInstance) balanceChartInstance.resize();
+        if (categoryChartInstance) categoryChartInstance.resize();
+      }, 50);
+    }
   });
 });
 
@@ -2324,15 +2342,15 @@ document.getElementById('btnReset').addEventListener('click', () => {
 document.getElementById('btnExport').addEventListener('click', () => {
   if (!parsedData) return;
   const txs = parsedData.transaksi || [];
-  const txRows = txs.map(t => ({
-    'Tanggal': t.tanggal||'', 'Keterangan': t.keterangan||'', 'Kategori': t.kategori||'',
-    'Debit (Keluar)': t.debit||'', 'Kredit (Masuk)': t.kredit||'', 'Saldo': t.saldo||''
+  const txRows = txs.map(tx => ({
+    'Tanggal': tx.tanggal||'', 'Keterangan': tx.keterangan||'', 'Kategori': tx.kategori||'',
+    'Debit (Keluar)': tx.debit||'', 'Kredit (Masuk)': tx.kredit||'', 'Saldo': tx.saldo||''
   }));
   const byD={}, byK={};
-  txs.forEach(t => {
-    const k=t.kategori||t('js.otherCategory');
-    if(t.debit) byD[k]=(byD[k]||0)+parseFloat(t.debit);
-    if(t.kredit) byK[k]=(byK[k]||0)+parseFloat(t.kredit);
+  txs.forEach(tx => {
+    const k=tx.kategori||t('js.otherCategory');
+    if(tx.debit) byD[k]=(byD[k]||0)+parseFloat(tx.debit);
+    if(tx.kredit) byK[k]=(byK[k]||0)+parseFloat(tx.kredit);
   });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txRows), 'Transaksi');
