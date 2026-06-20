@@ -523,7 +523,8 @@
 
   .pivot-wrap { padding: 22px; }
   .cashflow-wrap { padding: 22px; display: grid; gap: 22px; }
-  .cashflow-chart-box { background: white; border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .cashflow-chart-box { background: white; border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; position: relative; height: 280px; }
+  .cashflow-chart-box canvas { max-height: 220px !important; }
   .cashflow-chart-title { font-size: 12.5px; font-weight: 600; color: var(--slate); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 14px; }
 
   /* ===== Leak Detection Tab ===== */
@@ -604,6 +605,81 @@
     .pivot-2col { grid-template-columns: 1fr; }
     .footer-inner { flex-direction: column; align-items: flex-start; }
     .footer-meta { text-align: left; }
+  }
+
+  @media (max-width: 600px) {
+    /* Nav */
+    .nav-inner { padding: 14px 16px; }
+    .nav-logo { font-size: 17px; }
+    .nav-logo .mark { width: 22px; height: 22px; }
+    #langToggle { font-size: 11px; padding: 5px 10px; }
+    .nav-cta { font-size: 12px; padding: 7px 13px; }
+
+    /* Hero */
+    .hero { padding: 36px 16px 30px; gap: 32px; }
+    .hero h1 { font-size: 27px; }
+    .hero .sub { font-size: 14.5px; }
+    .hero-ctas { flex-direction: column; align-items: stretch; }
+    .floating-badge { font-size: 10px; padding: 5px 10px; top: -10px; right: 12px; }
+
+    /* Demo card in hero */
+    .demo-body { padding: 12px; }
+    .clean-row { font-size: 10px; grid-template-columns: 44px 1fr 64px 60px; }
+
+    /* Sections */
+    .section-head h2 { font-size: 24px; }
+    .section { padding: 40px 16px; }
+
+    /* Tabs (result tabs) */
+    .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 4px; }
+    .tab { padding: 11px 12px; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+
+    /* Tool shell */
+    .tool-body { padding: 18px; }
+    .tool-header { padding: 16px 18px; }
+    .tool-header-title { font-size: 16px; }
+    .upload-zone { padding: 32px 16px; }
+    .upload-zone h2 { font-size: 14px; }
+
+    /* Metrics cards */
+    .metrics { grid-template-columns: repeat(2,1fr); gap: 8px; }
+    .metric { padding: 11px 12px; }
+    .metric .mval { font-size: 16px; }
+
+    /* Tables (all transactions, leak) */
+    table { font-size: 11.5px; }
+    thead th { padding: 8px 10px; font-size: 9.5px; }
+    td { padding: 8px 10px; }
+    .table-wrap { max-height: 360px; }
+
+    /* Cash flow charts */
+    .cashflow-wrap { padding: 14px; gap: 14px; }
+    .cashflow-chart-box { height: 240px; padding: 14px 14px; }
+    .cashflow-chart-box canvas { max-height: 180px !important; }
+
+    /* Leak detection */
+    .leak-wrap { padding: 14px; }
+    .leak-summary { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
+    .leak-summary-top { border-left: none; padding-left: 0; border-top: 1px solid #e8c6c0; padding-top: 12px; }
+    .leak-summary-amount { font-size: 22px; }
+    .leak-toggle-btn { font-size: 10px; padding: 3px 7px; }
+
+    /* Actions row */
+    .actions-row { flex-direction: column; }
+    .actions-row .btn-tool { width: 100%; justify-content: center; }
+
+    /* Tax calculator */
+    .tax-calc-input-col, .tax-calc-result-col { padding: 20px; }
+    .tax-result-row.highlight strong { font-size: 18px; }
+
+    /* Pricing modal */
+    #pricingOverlay { padding: 10px; align-items: flex-end; }
+    .pricing-card { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .pricing-card > div:last-child { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+    .btn-pricing-select { margin-top: 0; }
+
+    /* Account filter */
+    #accountFilterWrap { flex-direction: column; align-items: flex-start; gap: 8px; }
   }
 </style>
 </head>
@@ -1027,11 +1103,11 @@
             <div class="cashflow-wrap">
               <div class="cashflow-chart-box">
                 <div class="cashflow-chart-title" data-i18n="tool.balanceTrend">Balance Trend</div>
-                <canvas id="balanceChart" height="220"></canvas>
+                <canvas id="balanceChart" height="200"></canvas>
               </div>
               <div class="cashflow-chart-box">
                 <div class="cashflow-chart-title" data-i18n="tool.categoryBreakdown">Income vs Expense by Category</div>
-                <canvas id="categoryChart" height="260"></canvas>
+                <canvas id="categoryChart" height="200"></canvas>
               </div>
             </div>
           </div>
