@@ -1845,14 +1845,34 @@ document.querySelectorAll('.pricing-tab').forEach(tab => {
 });
 
 document.querySelectorAll('.btn-pricing-select').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     const pkg = btn.dataset.package;
     const email = currentSession?.user?.email || '';
     const msg = `${t('pricing.thankYou')} <strong>${email}</strong> ${t('pricing.forActivation')} <strong>${pkg}</strong> ${t('pricing.plan')}`.trim();
     document.getElementById('pricingContactMsg').innerHTML = msg;
     document.getElementById('pricingContactNote').style.display = 'block';
     console.log(`[Statemate] User memilih paket: ${pkg} (${email})`);
-    // TODO: integrasi payment gateway (Midtrans/Xendit) di sini
+
+    if (!currentSession) {
+      console.warn('[Statemate] Tidak bisa kirim notifikasi paket - user belum login');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/notify-package-interest`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentSession.access_token}`
+        },
+        body: JSON.stringify({ packageName: pkg, email: email })
+      });
+      if (!res.ok) {
+        console.error('[Statemate] Gagal kirim notifikasi minat paket:', await res.text());
+      }
+    } catch (err) {
+      console.error('[Statemate] Error kirim notifikasi minat paket:', err);
+    }
   });
 });
 
