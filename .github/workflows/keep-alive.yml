@@ -11,4 +11,5 @@ jobs:
     steps:
       - name: Send API request to Supabase Auth Health
         run: |
-          curl -i -X GET "${{ secrets.SUPABASE_PROJECT_URL }}/auth/v1/health"
+          curl -i -X GET "${{ secrets.SUPABASE_PROJECT_URL }}/auth/v1/health" \
+          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
